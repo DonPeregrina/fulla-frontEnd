@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 263 30% 12%;
+    --foreground: 260 40% 95%;
+  }
+
+  * {
+    @apply border-fulla-border;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    /* Evita el bounce scroll en iOS y permite que sea fullscreen como app nativa */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body {
+    @apply bg-fulla-dark text-[#EDE9F8] font-sans antialiased;
+    min-height: 100dvh;
+    /* Safe area para notch/home-indicator en iOS */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@layer utilities {
+  .tab-bar-height {
+    height: calc(4rem + env(safe-area-inset-bottom));
+  }
+
+  .content-with-tabs {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}

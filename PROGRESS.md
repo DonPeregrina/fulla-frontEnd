@@ -1,6 +1,6 @@
 # Fulla — Estado del Proyecto
 
-> Última actualización: 2026-04-21 (v2)
+> Última actualización: 2026-04-21 (v3)
 > Backend: `https://delta-habits.azurewebsites.net/graphql`
 > Dev server: `cd ~/projects/fulla && npm run dev` → http://localhost:3000
 
@@ -118,33 +118,82 @@ fulla/
 
 ### HOST (`/host/*`)
 
-| Tab | Estado | Pendiente |
+| Tab | Estado | Notas |
 |---|---|---|
-| **Bitácoras** `/host/bitacoras` | ✅ **Completo** | Agrupa colecciones por fecha, expande por usuario, muestra respuestas con pregunta. |
-| **Hilos** `/host/hilos` | 🚧 Stub | Ver abajo |
-| **Usuarios** `/host/usuarios` | 🚧 Stub | Ver abajo |
-| **Perfil** `/host/perfil` | 🚧 Stub | Ver abajo |
+| **Bitácoras** `/host/bitacoras` | ✅ **Completo** | Tema claro. Grupos por fecha → usuario → respuestas. |
+| **Hilos** `/host/hilos` | ✅ **Completo** | Lista + crear + eliminar. Detalle en `/host/hilos/:id` con 2 tabs: Usuarios (invitar, agregar existente, remover) y Preguntas (crear con nudo picker, eliminar). |
+| **Usuarios** `/host/usuarios` | ✅ **Completo** | Lista usuarios + invitaciones pendientes. Invitar por email. Cancelar invitación. Detalle en `/host/usuarios/:id` con info, hilos (agregar/quitar), calendario de bitácoras con respuestas por día. |
+| **Perfil** `/host/perfil` | ✅ **Completo** | Avatar (localStorage), email, nombre, logout. |
 
-#### HilosTab (Host) — pendiente
-- [ ] Listar hilos del host (nombre, # usuarios, # preguntas)
-- [ ] Botón "Nuevo Hilo" → dialog con campo nombre → `createGroup`
-- [ ] Click en hilo → detalle del hilo:
-  - [ ] Lista de preguntas con su Nudo (categoría)
-  - [ ] Lista de usuarios del hilo
-  - [ ] Botón "Nueva Pregunta" → `createQuestion(body, groupId, categoryId)`
-  - [ ] Botón "Invitar usuario" → `sendInvite(email, groupId)`
-  - [ ] Eliminar pregunta → `removeQuestion(id)`
-  - [ ] Quitar usuario del hilo → `removeUserFromGroup(userId, groupId)`
-  - [ ] Eliminar hilo → `removeGroup(id)`
+---
 
-#### UsuariosTab — pendiente
-- [ ] Listar usuarios (avatar, nombre, username, # grupos)
-- [ ] Botón "Invitar" → dialog con email y opcionalmente grupo → `sendInvite(email, groupId?)`
-- [ ] Click en usuario → detalle: info básica, hilos, agregar/quitar de hilo
+### PLAN HOST — basado en app original (`../habitos`)
 
-#### PerfilTab (Host) — pendiente
-- [ ] Mostrar nombre, email, avatar
-- [ ] Botón "Cerrar sesión" → `logout()`
+#### 1. HilosTab (host) — `/host/hilos` 🔨 EN PROGRESO
+
+**Lista de hilos:**
+- [x] `hilosApi.list()` → nombre, # usuarios, # preguntas por hilo
+- [x] Botón "Nuevo hilo" → Dialog con input nombre → `hilosApi.create(name)`
+- [x] Botón eliminar hilo → confirmación → `hilosApi.remove(id)`
+- [x] Tap en hilo → **Detalle del Hilo** en `/host/hilos/:id`
+
+**Detalle del Hilo — tab Usuarios:**
+- [x] Lista de usuarios + invitaciones pendientes en ese hilo
+- [x] Botón "Invitar" → Dialog email → `invitacionesApi.send(email, groupId)`
+- [x] Botón "Agregar existente" → Modal lista usuarios → `hilosApi.addUser(userId, groupId)`
+- [x] Botón remover usuario → confirmación → `hilosApi.removeUser(userId, groupId)`
+- [x] Cancelar invitación → `invitacionesApi.remove(id)`
+
+**Detalle del Hilo — tab Preguntas:**
+- [x] Lista de preguntas con badge del Nudo (color)
+- [x] Botón "Agregar pregunta" → Dialog con texto + selector de Nudo → `preguntasApi.create(body, groupId, categoryId)`
+- [x] Botón eliminar pregunta → confirmación → `preguntasApi.remove(id)`
+- [ ] Editar pregunta → ⏳ pendiente backend (`updateQuestion` mutation no existe aún)
+
+---
+
+#### 2. UsuariosTab (host) — `/host/usuarios` 🚧 PENDIENTE
+
+**Lista de usuarios:**
+- [x] `usersApi.list()` + `invitacionesApi.listMine()` → usuarios activos + pendientes separados
+- [x] Botón "Invitar" → Dialog email → `invitacionesApi.send(email)`
+- [x] Cancelar invitación → confirmación → `invitacionesApi.remove(id)`
+- [x] Tap usuario → `/host/usuarios/:id`
+- [ ] Eliminar usuario → ⏳ pendiente backend (`usersApi.delete` no existe)
+
+**Detalle de Usuario (`/host/usuarios/:id`):**
+- [x] Avatar iniciales, nombre, username, email
+- [x] Lista de hilos donde el usuario es miembro (desde `hilosApi.list()` filtrado)
+- [x] Botón "Agregar a hilo" → Modal → `hilosApi.addUser(userId, groupId)`
+- [x] Quitar de hilo → confirmación → `hilosApi.removeUser(userId, groupId)`
+- [x] Calendario de bitácoras del usuario → días marcados
+- [x] Tap en día marcado → respuestas de ese día (pregunta + respuesta + nudo)
+
+---
+
+#### 3. Bitácoras — detalle por usuario+fecha 🚧 PENDIENTE
+
+- [ ] Desde detalle de usuario → tap en día → vista `/host/bitacoras/[fecha]?userId=[id]`
+- [ ] Mostrar respuestas de ese usuario específico en esa fecha
+- [ ] Reusar data de `bitacorasApi.list(userId)` ya cacheada
+
+---
+
+#### APIs disponibles vs pendientes de backend
+
+| Operación | API en fulla | Estado |
+|---|---|---|
+| Crear hilo | `hilosApi.create(name)` | ✅ |
+| Eliminar hilo | `hilosApi.remove(id)` | ✅ |
+| Agregar usuario a hilo | `hilosApi.addUser(userId, groupId)` | ✅ |
+| Quitar usuario de hilo | `hilosApi.removeUser(userId, groupId)` | ✅ |
+| Crear pregunta | `preguntasApi.create(body, groupId, categoryId)` | ✅ |
+| Eliminar pregunta | `preguntasApi.remove(id)` | ✅ |
+| **Editar pregunta** | — | ⏳ Pendiente backend |
+| Invitar usuario | `invitacionesApi.send(email, groupId?)` | ✅ |
+| Cancelar invitación | `invitacionesApi.remove(id)` | ✅ |
+| **Eliminar usuario** | — | ⏳ Pendiente backend |
+| **Editar nombre host** | — | ⏳ Verificar mutation `updateHost` |
 
 ---
 
@@ -157,16 +206,6 @@ fulla/
 | **Historial** `/user/historial` | ✅ **Completo** | Lista paginada (20/página) de todas las respuestas ordenadas por fecha. Reusar cache `['respuestas-all']`. |
 | **Perfil** `/user/perfil` | ✅ **Completo** | Avatar iniciales, afiliaciones (nombres de hilos), botón Desconectar funcional. |
 
-#### HistorialTab — pendiente
-- [ ] Calendario mensual con días marcados (tiene registro = indicador de color)
-- [ ] Click en día → lista de respuestas de ese día (pregunta + respuesta)
-- [ ] Usar `collections(userId)` — 197 bitácoras disponibles para MrPilgrim
-- [ ] Fechas vienen como Unix ms timestamps — usar `toDate()` de utils
-
-#### PerfilTab (User) — pendiente
-- [ ] Mostrar username, nombre, email
-- [ ] Lista de hilos a los que pertenece
-- [ ] Botón "Cerrar sesión" → `logout()`
 
 ---
 

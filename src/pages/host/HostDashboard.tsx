@@ -5,7 +5,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { Host } from '@/types'
 import BitacorasTab from './tabs/BitacorasTab'
 import HilosTab from './tabs/HilosTab'
+import HiloDetail from './HiloDetail'
 import UsuariosTab from './tabs/UsuariosTab'
+import UsuarioDetail from './UsuarioDetail'
 import PerfilTab from './tabs/PerfilTab'
 
 const tabs = [
@@ -78,7 +80,9 @@ export default function HostDashboard() {
           <Route index element={<Navigate to="bitacoras" replace />} />
           <Route path="bitacoras" element={<BitacorasTab />} />
           <Route path="hilos"     element={<HilosTab />} />
-          <Route path="usuarios"  element={<UsuariosTab />} />
+          <Route path="hilos/:id" element={<HiloDetail />} />
+          <Route path="usuarios"       element={<UsuariosTab />} />
+          <Route path="usuarios/:id"  element={<UsuarioDetail />} />
           <Route path="perfil"    element={<PerfilTab />} />
         </Routes>
       </main>

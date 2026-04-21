@@ -190,7 +190,7 @@ export const invitacionesApi = {
 // El backend los llama "categories" y solo los expone con host token.
 // TODO: cuando el backend exponga /categories con user token, reemplazar getNudos() por nudosApi.list()
 
-const NUDOS_HARDCODED: import('@/types').Nudo[] = [
+export const NUDOS_HARDCODED: import('@/types').Nudo[] = [
   { id: 'f32d0ca0-fb3d-4326-9738-bba153be51c2', name: 'Waking Up' },
   { id: '019b339c-aa65-45ed-8e8d-f4dff30520c4', name: 'Morning'   },
   { id: '79ebd774-4516-424d-abc5-78462df1fe74', name: 'Meal'      },
