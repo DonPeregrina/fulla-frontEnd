@@ -16,8 +16,9 @@ type FormData = z.infer<typeof schema>
 export default function SignIn() {
   const { login, session } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [identifier, setIdentifier] = useState('')
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
 
@@ -36,64 +37,92 @@ export default function SignIn() {
     }
   }
 
-  const isHostHint = (val: string) => val.includes('@')
+  const currentId = watch('identifier') ?? ''
+  const isHost = currentId.includes('@')
 
   return (
-    <div className="min-h-dvh bg-fulla-dark flex flex-col items-center justify-center px-6">
-      {/* Logo */}
-      <div className="mb-10 text-center">
-        <h1 className="text-5xl font-black tracking-[0.3em] text-fulla-gold uppercase">Fulla</h1>
-        <p className="mt-2 text-fulla-muted text-xs tracking-widest uppercase">
-          Hilos de hábitos · Nodos de hallazgos
+    <div className="min-h-dvh bg-[#EDE9F8] flex flex-col items-center justify-center px-6 relative overflow-hidden">
+
+      {/* Blobs decorativos */}
+      <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-[#DDD5EE] opacity-60 translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-[#DDD5EE] opacity-50 -translate-x-1/3 translate-y-1/3 pointer-events-none" />
+
+      <div className="w-full max-w-sm relative z-10">
+
+        {/* Logo */}
+        <div className="mb-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#2D2440] mb-4 shadow-lg">
+            <span className="text-[#F0C030] text-2xl font-black tracking-tight">F</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-[0.2em] text-[#2D2440] uppercase">Fulla</h1>
+          <p className="mt-1.5 text-[#B0A8CC] text-[10px] tracking-[.2em] uppercase font-bold">
+            Hilos de hábitos
+          </p>
+        </div>
+
+        {/* Role hint */}
+        {currentId.length > 0 && (
+          <div
+            className="mb-4 px-3 py-2 rounded-xl border text-[9px] font-bold uppercase tracking-widest text-center transition-all"
+            style={{
+              backgroundColor: isHost ? '#2D244022' : '#F0C03022',
+              borderColor: isHost ? '#2D2440' : '#F0C030',
+              color: isHost ? '#2D2440' : '#5A4A7A',
+            }}
+          >
+            {isHost ? '🔑 Acceso Host' : '👤 Acceso Participante'}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-bold tracking-[.2em] text-[#5A4A7A] uppercase">
+              Email o usuario
+            </label>
+            <input
+              {...register('identifier')}
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="username"
+              placeholder="tu@email.com  ·  o tu usuario"
+              className="w-full bg-white border-2 border-[#DDD5EE] rounded-2xl px-4 py-3.5 text-sm text-[#2D2440] placeholder:text-[#B0A8CC] focus:outline-none focus:border-[#F0C030] transition-colors"
+            />
+            {errors.identifier && (
+              <p className="text-[#E8503A] text-[10px] font-bold">{errors.identifier.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[9px] font-bold tracking-[.2em] text-[#5A4A7A] uppercase">
+              Contraseña
+            </label>
+            <input
+              {...register('password')}
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              className="w-full bg-white border-2 border-[#DDD5EE] rounded-2xl px-4 py-3.5 text-sm text-[#2D2440] placeholder:text-[#B0A8CC] focus:outline-none focus:border-[#F0C030] transition-colors"
+            />
+            {errors.password && (
+              <p className="text-[#E8503A] text-[10px] font-bold">{errors.password.message}</p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-2 py-4 rounded-2xl font-black text-[11px] tracking-widest uppercase transition-all active:scale-95 disabled:opacity-50 shadow-[4px_4px_0px_rgba(45,36,64,0.15)]"
+            style={{ backgroundColor: '#F0C030', color: '#2D2440' }}
+          >
+            {loading ? 'Conectando…' : 'Entrar'}
+          </button>
+        </form>
+
+        <p className="mt-8 text-[#B0A8CC] text-[9px] text-center tracking-wider uppercase">
+          Email → Host · Usuario → Participante
         </p>
       </div>
-
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm space-y-4">
-        <div className="space-y-1">
-          <label className="text-xs font-bold tracking-widest text-fulla-muted uppercase">
-            Email o usuario
-          </label>
-          <input
-            {...register('identifier')}
-            autoCapitalize="none"
-            autoCorrect="off"
-            placeholder="host@fulla.io  ·  o tu usuario"
-            className="w-full bg-[#1A1228] border border-fulla-border rounded-lg px-4 py-3 text-sm text-[#EDE9F8] placeholder:text-fulla-muted/50 focus:outline-none focus:border-fulla-gold transition-colors"
-          />
-          {errors.identifier && (
-            <p className="text-red-400 text-xs">{errors.identifier.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-bold tracking-widest text-fulla-muted uppercase">
-            Contraseña
-          </label>
-          <input
-            {...register('password')}
-            type="password"
-            placeholder="••••••••"
-            className="w-full bg-[#1A1228] border border-fulla-border rounded-lg px-4 py-3 text-sm text-[#EDE9F8] placeholder:text-fulla-muted/50 focus:outline-none focus:border-fulla-gold transition-colors"
-          />
-          {errors.password && (
-            <p className="text-red-400 text-xs">{errors.password.message}</p>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-fulla-gold text-fulla-dark font-black text-sm tracking-widest uppercase rounded-lg py-4 mt-2 disabled:opacity-50 active:scale-95 transition-all"
-        >
-          {loading ? '...' : 'Entrar'}
-        </button>
-      </form>
-
-      {/* Hint de rol */}
-      <p className="mt-8 text-fulla-muted/60 text-xs text-center">
-        Email → acceso Host · Usuario → acceso participante
-      </p>
     </div>
   )
 }
