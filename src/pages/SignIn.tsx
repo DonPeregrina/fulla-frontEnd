@@ -50,12 +50,10 @@ export default function SignIn() {
       <div className="w-full max-w-sm relative z-10">
 
         {/* Logo */}
-        <div className="mb-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#2D2440] mb-4 shadow-lg overflow-hidden">
-            <img src="/logo_png.png" alt="Fulla" className="w-10 h-10 object-contain" />
-          </div>
-          <h1 className="text-3xl font-black tracking-[0.2em] text-[#2D2440] uppercase">Fulla</h1>
-          <p className="mt-1.5 text-[#B0A8CC] text-[10px] tracking-[.2em] uppercase font-bold">
+        <div className="mb-10 text-center">
+          <img src="/logo_png.png" alt="Fulla" className="w-20 h-20 object-contain mx-auto mb-3 drop-shadow-sm" />
+          <h1 className="text-2xl font-black tracking-[0.25em] text-[#2D2440] uppercase">Fulla</h1>
+          <p className="mt-1 text-[#B0A8CC] text-[9px] tracking-[.25em] uppercase font-bold">
             Hilos de hábitos
           </p>
         </div>
