@@ -1,0 +1,12 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/assets/*", "/icons/*", "/*.png", "/*.jpg", "/*.svg", "/sw.js", "/workbox-*.js", "/manifest.webmanifest"]
+  },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json"
+  },
+  "globalHeaders": {
+    "Cache-Control": "no-cache"
+  }
+}

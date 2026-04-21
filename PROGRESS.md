@@ -296,7 +296,8 @@ rsync -a --exclude='.git' --exclude='node_modules' \
 | Endpoint | Estado | Impacto |
 |---|---|---|
 | `categories` con user token | ⏳ Pendiente | Reemplazar `getNudos()` hardcodeado por llamada real |
-| `group(id)` con user token | ⏳ Pendiente | Obtener nombres de hilos sin depender del cache del host |
+| `group(id)` con user token | ⏳ Pendiente | **CRÍTICO** — Obtener preguntas del hilo directamente. Sin esto, preguntas nuevas agregadas por el host NO aparecen para el usuario hasta que las contesta (huevo y gallina). También necesario para nombres de hilos. |
+| `userQuestions(userId)` (o similar) | ⏳ Pendiente | Alternativa a `group(id)` — endpoint dedicado que devuelva todas las preguntas activas de los hilos del usuario |
 
 ## Identidad gráfica
 
