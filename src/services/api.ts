@@ -205,6 +205,11 @@ export async function getNudos(): Promise<import('@/types').Nudo[]> {
   return NUDOS_HARDCODED
 }
 
+/** Nombre de un Nudo por su categoryId */
+export function getNudoNombre(categoryId: string): string {
+  return NUDOS_HARDCODED.find(n => n.id === categoryId)?.name ?? categoryId.slice(0, 8)
+}
+
 // ─── Hilos fallback ───────────────────────────────────────────────────────────
 // group(id) es host-only. Mapeamos UUIDs conocidos a nombres.
 // Cuando el backend exponga grupos para user token, usar hilosApi.get(id) en su lugar.

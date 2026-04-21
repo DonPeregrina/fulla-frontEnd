@@ -51,8 +51,8 @@ export default function SignIn() {
 
         {/* Logo */}
         <div className="mb-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#2D2440] mb-4 shadow-lg">
-            <span className="text-[#F0C030] text-2xl font-black tracking-tight">F</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#2D2440] mb-4 shadow-lg overflow-hidden">
+            <img src="/logo_png.png" alt="Fulla" className="w-10 h-10 object-contain" />
           </div>
           <h1 className="text-3xl font-black tracking-[0.2em] text-[#2D2440] uppercase">Fulla</h1>
           <p className="mt-1.5 text-[#B0A8CC] text-[10px] tracking-[.2em] uppercase font-bold">

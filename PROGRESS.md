@@ -1,6 +1,6 @@
 # Fulla — Estado del Proyecto
 
-> Última actualización: 2026-04-21
+> Última actualización: 2026-04-21 (v2)
 > Backend: `https://delta-habits.azurewebsites.net/graphql`
 > Dev server: `cd ~/projects/fulla && npm run dev` → http://localhost:3000
 
@@ -152,10 +152,10 @@ fulla/
 
 | Tab | Estado | Notas |
 |---|---|---|
-| **Nudos** `/user` | ✅ **Completo** | BraidCanvas por Nudo, satélites = Hilos. Click hilo → modal con sus preguntas. Nombres de nudos hardcodeados en `getNudos()`. Nombres de hilos del cache localStorage. |
-| **Hilos** `/user/hilos` | ✅ **Completo** | Lista read-only de hilos del usuario con sus nudos. |
-| **Historial** `/user/historial` | 🚧 Stub | Ver abajo |
-| **Perfil** `/user/perfil` | 🚧 Stub | Ver abajo |
+| **Nudos** `/user` | ✅ **Completo** | BraidCanvas/Nudo, satélites=Hilos. Modal con lápiz de edición. Respuestas: create si nueva, update si ya existe hoy. staleTime 10min. |
+| **Hilos** `/user/hilos` | ✅ **Completo** | Lista read-only, fondo `#EDE9F8`, nudos como badges de color. |
+| **Historial** `/user/historial` | ✅ **Completo** | Lista paginada (20/página) de todas las respuestas ordenadas por fecha. Reusar cache `['respuestas-all']`. |
+| **Perfil** `/user/perfil` | ✅ **Completo** | Avatar iniciales, afiliaciones (nombres de hilos), botón Desconectar funcional. |
 
 #### HistorialTab — pendiente
 - [ ] Calendario mensual con días marcados (tiene registro = indicador de color)
@@ -258,6 +258,15 @@ rsync -a --exclude='.git' --exclude='node_modules' \
 |---|---|---|
 | `categories` con user token | ⏳ Pendiente | Reemplazar `getNudos()` hardcodeado por llamada real |
 | `group(id)` con user token | ⏳ Pendiente | Obtener nombres de hilos sin depender del cache del host |
+
+## Identidad gráfica
+
+| Asset | Estado | Notas |
+|---|---|---|
+| PWA icons (192/512) | ✅ | Generados con `node scripts/generate-icons.js` (requiere `sharp`) desde `images/logo.jpg` |
+| Logo en SignIn | ✅ | PNG transparente sobre fondo `#2D2440` |
+| Logo en tab Nudos | ✅ | 28px junto al saludo |
+| Logo fuente | `images/logo.jpg` (bg sólido) + `images/logo_png.png` (transparente) | |
 
 ## Siguiente paso sugerido
 

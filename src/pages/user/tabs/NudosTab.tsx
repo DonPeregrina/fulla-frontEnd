@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
-import { CheckCircle2, X, History } from 'lucide-react'
+import { CheckCircle2, X, History, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useAuth } from '@/contexts/AuthContext'
-import { getNudos, getHiloNombre, respuestasApi } from '@/services/api'
+import { getNudos, getHiloNombre, getNudoNombre, respuestasApi } from '@/services/api'
 import { nudoColor, type Pregunta, type Respuesta } from '@/types'
 import { todayISO, formatDate } from '@/lib/utils'
 import { BraidCanvas, type HiloCanvas } from '@/components/BraidCanvas'
@@ -65,6 +65,19 @@ function HiloModal({
   onClose: () => void
 }) {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [editando, setEditando] = useState<Set<string>>(new Set())
+
+  function isEditando(id: string) { return editando.has(id) }
+  function toggleEdit(p: Pregunta) {
+    setEditando(prev => {
+      const next = new Set(prev)
+      if (next.has(p.id)) { next.delete(p.id) } else {
+        next.add(p.id)
+        setDrafts(d => ({ ...d, [p.id]: respuestasHoyMap[p.id]?.body ?? '' }))
+      }
+      return next
+    })
+  }
 
   function draft(p: Pregunta) {
     return drafts[p.id] ?? respuestasHoyMap[p.id]?.body ?? ''
@@ -74,6 +87,7 @@ function HiloModal({
     const val = draft(p).trim()
     if (!val) return
     onGuardar(p.id, val)
+    setEditando(prev => { const next = new Set(prev); next.delete(p.id); return next })
   }
 
   return (
@@ -104,13 +118,13 @@ function HiloModal({
           <div className="space-y-4">
             {preguntas.map(p => {
               const resp = respuestasHoyMap[p.id]
-              const isAnswered = !!resp
+              const isAnswered = !!resp && !isEditando(p.id)
               const val = draft(p)
 
               return (
                 <div
                   key={p.id}
-                  className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${isAnswered ? 'border-[#C4BAD8] bg-white/50' : 'border-[#DDD5EE] bg-white'}`}
+                  className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${resp ? 'border-[#C4BAD8] bg-white/50' : 'border-[#DDD5EE] bg-white'}`}
                 >
                   <p className="text-[10px] font-bold leading-relaxed text-[#2D2440] uppercase tracking-wide">
                     {p.body}
@@ -119,6 +133,13 @@ function HiloModal({
                     <div className="flex items-center gap-2">
                       <CheckCircle2 size={14} style={{ color: hilo.color }} className="shrink-0" />
                       <span className="text-xs text-[#5A4A7A] flex-1">{resp.body}</span>
+                      <button
+                        onClick={() => toggleEdit(p)}
+                        className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-[#DDD5EE] transition-colors shrink-0"
+                        title="Editar"
+                      >
+                        <Pencil size={11} className="text-[#B0A8CC]" />
+                      </button>
                     </div>
                   ) : (
                     <div className="flex gap-2">
@@ -127,6 +148,7 @@ function HiloModal({
                         onChange={e => setDrafts(d => ({ ...d, [p.id]: e.target.value }))}
                         onKeyDown={e => e.key === 'Enter' && handleSave(p)}
                         placeholder="Tu respuesta…"
+                        autoFocus={isEditando(p.id)}
                         className="flex-1 bg-white border border-[#DDD5EE] rounded-xl px-3 py-2 text-xs text-[#2D2440] placeholder:text-[#B0A8CC] focus:outline-none focus:border-[#F0C030] transition-colors"
                       />
                       <button
@@ -211,12 +233,14 @@ export default function NudosTab() {
     queryKey: ['respuestas-all', userId],
     queryFn: () => respuestasApi.list(userId),
     enabled: !!userId,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 10,
   })
 
   const mutation = useMutation({
-    mutationFn: ({ questionId, body }: { questionId: string; body: string }) =>
-      respuestasApi.create(questionId, body),
+    mutationFn: async ({ questionId, body, respuestaId }: { questionId: string; body: string; respuestaId?: string }) => {
+      if (respuestaId) { await respuestasApi.update(respuestaId, body); return }
+      await respuestasApi.create(questionId, body)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['respuestas-all', userId] })
       toast.success('Respuesta guardada')
@@ -275,9 +299,12 @@ export default function NudosTab() {
         <p className="text-[10px] uppercase tracking-[.15em] text-[#5A4A7A]">
           {turno} · {format(new Date(), "d 'de' MMMM", { locale: es })}
         </p>
-        <h1 className="text-xl font-black tracking-tight text-[#2D2440] mt-0.5">
-          Hola, {nombre}
-        </h1>
+        <div className="flex items-center gap-2 mt-0.5">
+          <img src="/logo_png.png" alt="" className="w-7 h-7 object-contain opacity-80" />
+          <h1 className="text-xl font-black tracking-tight text-[#2D2440]">
+            Hola, {nombre}
+          </h1>
+        </div>
         {totalHoy > 0 && (
           <div className="mt-3 space-y-1.5">
             <div className="flex justify-between text-[9px] font-bold text-[#B0A8CC] uppercase tracking-widest">
@@ -351,7 +378,7 @@ export default function NudosTab() {
           preguntas={seleccion.nudo.preguntas.filter(p => p.groupId === seleccion.hilo.id)}
           respuestasHoyMap={respuestasHoyMap}
           guardando={mutation.isPending}
-          onGuardar={(qId, body) => mutation.mutate({ questionId: qId, body })}
+          onGuardar={(qId, body) => mutation.mutate({ questionId: qId, body, respuestaId: respuestasHoyMap[qId]?.id })}
           open={!!seleccion}
           onClose={() => setSeleccion(null)}
         />
