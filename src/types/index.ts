@@ -89,9 +89,21 @@ export interface Session {
 
 // ─── Colores de Nudo ─────────────────────────────────────────────────────────
 
+// Colores semánticos fijos por ID de nudo (time option)
+const NUDO_COLORS: Record<string, string> = {
+  'f32d0ca0-fb3d-4326-9738-bba153be51c2': '#FBBF24', // Waking Up — amarillo sol
+  '019b339c-aa65-45ed-8e8d-f4dff30520c4': '#10b981', // Morning    — verde fresco
+  '79ebd774-4516-424d-abc5-78462df1fe74': '#0D9488', // Meal       — teal/aguamarina
+  '2098930f-bef7-483b-9f79-7efc68fc1f70': '#f97316', // Afternoon  — naranja
+  'b3798f9e-55a4-45b7-94f6-eef49c0a343a': '#ec4899', // Evening    — rosa
+  '4a769c30-5b59-4ab8-be5e-d9a74b4350a3': '#8b5cf6', // Night      — morado
+}
+
+// Paleta genérica para hilos (groupIds) y elementos sin ID de nudo conocido
 const PALETTE = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#f97316']
 
 export function nudoColor(categoryId: string, index?: number): string {
+  if (NUDO_COLORS[categoryId]) return NUDO_COLORS[categoryId]
   if (index !== undefined) return PALETTE[index % PALETTE.length]
   const sum = categoryId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
   return PALETTE[sum % PALETTE.length]

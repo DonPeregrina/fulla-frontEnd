@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
-import { ArrowLeft, X, Trash2, UserPlus, UserMinus, Plus } from 'lucide-react'
+import { ArrowLeft, X, Trash2, UserPlus, UserMinus, Plus, Pencil } from 'lucide-react'
 import { hilosApi, preguntasApi, invitacionesApi, usersApi, getNudoNombre, NUDOS_HARDCODED } from '@/services/api'
 import { nudoColor } from '@/types'
 import type { Pregunta } from '@/types'
@@ -28,37 +28,48 @@ function Skeleton() {
 function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregunta[] }) {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [editandoP, setEditandoP] = useState<Pregunta | null>(null) // null = crear, Pregunta = editar
   const [body, setBody] = useState('')
   const [categoryId, setCategoryId] = useState(NUDOS_HARDCODED[0].id)
   const [eliminando, setEliminando] = useState<string | null>(null)
 
+  function abrirCrear() {
+    setEditandoP(null); setBody(''); setCategoryId(NUDOS_HARDCODED[0].id); setOpen(true)
+  }
+  function abrirEditar(p: Pregunta) {
+    setEditandoP(p); setBody(p.body); setCategoryId(p.categoryId); setOpen(true)
+  }
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['hilo', hiloId] })
+    qc.invalidateQueries({ queryKey: ['hilos'] })
+  }
+
   const createMutation = useMutation({
     mutationFn: () => preguntasApi.create(body.trim(), hiloId, categoryId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['hilo', hiloId] })
-      qc.invalidateQueries({ queryKey: ['hilos'] })
-      toast.success('Pregunta agregada')
-      setBody(''); setOpen(false)
-    },
+    onSuccess: () => { invalidate(); toast.success('Pregunta agregada'); setOpen(false) },
     onError: () => toast.error('No se pudo crear'),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: () => preguntasApi.update(editandoP!.id, body.trim(), editandoP!.groupId, categoryId),
+    onSuccess: () => { invalidate(); toast.success('Pregunta actualizada'); setOpen(false) },
+    onError: () => toast.error('No se pudo actualizar'),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => preguntasApi.remove(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['hilo', hiloId] })
-      qc.invalidateQueries({ queryKey: ['hilos'] })
-      toast.success('Pregunta eliminada')
-      setEliminando(null)
-    },
+    onSuccess: () => { invalidate(); toast.success('Pregunta eliminada'); setEliminando(null) },
     onError: () => toast.error('No se pudo eliminar'),
   })
+
+  const isSaving = createMutation.isPending || updateMutation.isPending
 
   return (
     <div className="space-y-3">
       {/* Botón agregar */}
       <button
-        onClick={() => setOpen(true)}
+        onClick={abrirCrear}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-[#DDD5EE] text-[10px] font-bold uppercase tracking-widest text-[#B0A8CC] hover:border-[#F0C030] hover:text-[#F0C030] transition-colors"
       >
         <Plus size={13} />
@@ -82,32 +93,32 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
               </div>
               <div className="flex items-start justify-between gap-3">
                 <p className="text-xs font-bold text-[#2D2440] leading-snug flex-1">{p.body}</p>
-                <button
-                  onClick={() => setEliminando(p.id)}
-                  className="shrink-0 text-[#E8503A]/40 hover:text-[#E8503A] transition-colors"
-                >
-                  <Trash2 size={13} />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => abrirEditar(p)} className="text-[#B0A8CC] hover:text-[#2D2440] transition-colors">
+                    <Pencil size={13} />
+                  </button>
+                  <button onClick={() => setEliminando(p.id)} className="text-[#E8503A]/40 hover:text-[#E8503A] transition-colors">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             </div>
           )
         })
       )}
 
-      {/* Dialog: Nueva pregunta */}
-      <Dialog.Root open={open} onOpenChange={setOpen}>
+      {/* Dialog: Crear / Editar pregunta */}
+      <Dialog.Root open={open} onOpenChange={o => { if (!o) setOpen(false) }}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
           <Dialog.Content className="fixed inset-x-4 top-[10%] z-50 rounded-[28px] border-2 border-[#C8BEE0] bg-[#EDE9F8] p-6 max-w-sm mx-auto focus:outline-none">
             <div className="flex items-center justify-between mb-5">
               <Dialog.Title className="text-[11px] font-black uppercase tracking-[.2em] text-[#2D2440]">
-                Nueva Pregunta
+                {editandoP ? 'Editar Pregunta' : 'Nueva Pregunta'}
               </Dialog.Title>
-              <Dialog.Close asChild>
-                <button className="w-7 h-7 flex items-center justify-center rounded-full bg-white/50 text-[#8878AA]">
-                  <X size={14} />
-                </button>
-              </Dialog.Close>
+              <button onClick={() => setOpen(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-white/50 text-[#8878AA]">
+                <X size={14} />
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -118,6 +129,7 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
                   onChange={e => setBody(e.target.value)}
                   placeholder="¿Qué quieres preguntarle al usuario?"
                   rows={3}
+                  autoFocus
                   className="w-full bg-white border-2 border-[#DDD5EE] rounded-2xl px-4 py-3 text-sm text-[#2D2440] placeholder:text-[#B0A8CC] focus:outline-none focus:border-[#F0C030] transition-colors resize-none"
                 />
               </div>
@@ -125,19 +137,15 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
               <div>
                 <label className="text-[9px] font-bold uppercase tracking-widest text-[#5A4A7A] block mb-1.5">Nudo (momento del día)</label>
                 <div className="flex flex-wrap gap-2">
-                  {NUDOS_HARDCODED.map((n, i) => {
-                    const color = nudoColor(n.id, i)
+                  {NUDOS_HARDCODED.map(n => {
+                    const color = nudoColor(n.id)
                     const selected = categoryId === n.id
                     return (
                       <button
                         key={n.id}
                         onClick={() => setCategoryId(n.id)}
                         className="px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border-2 transition-all"
-                        style={{
-                          borderColor: color,
-                          backgroundColor: selected ? color : 'white',
-                          color: selected ? 'white' : color,
-                        }}
+                        style={{ borderColor: color, backgroundColor: selected ? color : 'white', color: selected ? 'white' : color }}
                       >
                         {n.name}
                       </button>
@@ -148,11 +156,11 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
             </div>
 
             <button
-              onClick={() => createMutation.mutate()}
-              disabled={!body.trim() || createMutation.isPending}
+              onClick={() => editandoP ? updateMutation.mutate() : createMutation.mutate()}
+              disabled={!body.trim() || isSaving}
               className="mt-5 w-full py-3.5 rounded-2xl bg-[#F0C030] text-[#2D2440] font-black text-[10px] tracking-widest uppercase disabled:opacity-40 active:scale-95 transition-all"
             >
-              {createMutation.isPending ? 'Guardando…' : 'Agregar pregunta'}
+              {isSaving ? 'Guardando…' : editandoP ? 'Guardar cambios' : 'Agregar pregunta'}
             </button>
           </Dialog.Content>
         </Dialog.Portal>

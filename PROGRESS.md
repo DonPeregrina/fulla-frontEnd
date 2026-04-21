@@ -121,7 +121,7 @@ fulla/
 | Tab | Estado | Notas |
 |---|---|---|
 | **Bitácoras** `/host/bitacoras` | ✅ **Completo** | Tema claro. Grupos por fecha → usuario → respuestas. |
-| **Hilos** `/host/hilos` | ✅ **Completo** | Lista + crear + eliminar. Detalle en `/host/hilos/:id` con 2 tabs: Usuarios (invitar, agregar existente, remover) y Preguntas (crear con nudo picker, eliminar). |
+| **Hilos** `/host/hilos` | ✅ **Completo** | Lista + crear + eliminar. Detalle `/host/hilos/:id` con 2 tabs: Usuarios (invitar, agregar, remover) y Preguntas (crear, **editar** ✅, eliminar + nudo picker). |
 | **Usuarios** `/host/usuarios` | ✅ **Completo** | Lista usuarios + invitaciones pendientes. Invitar por email. Cancelar invitación. Detalle en `/host/usuarios/:id` con info, hilos (agregar/quitar), calendario de bitácoras con respuestas por día. |
 | **Perfil** `/host/perfil` | ✅ **Completo** | Avatar (localStorage), email, nombre, logout. |
 
@@ -148,7 +148,7 @@ fulla/
 - [x] Lista de preguntas con badge del Nudo (color)
 - [x] Botón "Agregar pregunta" → Dialog con texto + selector de Nudo → `preguntasApi.create(body, groupId, categoryId)`
 - [x] Botón eliminar pregunta → confirmación → `preguntasApi.remove(id)`
-- [ ] Editar pregunta → ⏳ pendiente backend (`updateQuestion` mutation no existe aún)
+- [x] Editar pregunta → lápiz en cada pregunta → mismo dialog prellenado → `preguntasApi.update(id, body, groupId, categoryId)` ✅
 
 ---
 

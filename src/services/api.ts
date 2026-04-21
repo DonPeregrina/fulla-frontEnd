@@ -260,6 +260,13 @@ export const preguntasApi = {
       }
     `, { input: { body, groupId, categoryId } }),
 
+  update: (id: string, body: string, groupId: string, categoryId: string) =>
+    gql<{ updateQuestion: { question: import('@/types').Pregunta } }>(`
+      mutation UpdateQuestion($id: ID!, $input: CreateQuestionInput!) {
+        updateQuestion(id: $id, input: $input) { question { id body groupId categoryId } }
+      }
+    `, { id, input: { body, groupId, categoryId } }),
+
   remove: (id: string) =>
     gql<{ removeQuestion: { question: { id: string } } }>(`
       mutation RemoveQuestion($id: ID!) { removeQuestion(id: $id) { question { id } } }
