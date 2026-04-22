@@ -14,7 +14,11 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(cp \"C:\\\\Users\\\\IsmaelPeregrinaRamir\\\\OneDrive - Christus CEI\\\\Documentos\\\\Codigo\\\\GIT\\\\DeltaHabits\\\\fulla\\\\new_images\\\\logo_png.png\" \"C:\\\\Users\\\\IsmaelPeregrinaRamir\\\\OneDrive - Christus CEI\\\\Documentos\\\\Codigo\\\\GIT\\\\DeltaHabits\\\\fulla\\\\public\\\\logo_png.png\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\IsmaelPeregrinaRamir\\\\OneDrive - Christus CEI\\\\Documentos\\\\Codigo\\\\GIT\\\\DeltaHabits\\\\fulla\\\\public\\\\icons\")",
+      "Bash(cp \"C:\\\\Users\\\\IsmaelPeregrinaRamir\\\\OneDrive - Christus CEI\\\\Documentos\\\\Codigo\\\\GIT\\\\DeltaHabits\\\\fulla\\\\new_images\\\\chibi2.png\" \"C:\\\\Users\\\\IsmaelPeregrinaRamir\\\\OneDrive - Christus CEI\\\\Documentos\\\\Codigo\\\\GIT\\\\DeltaHabits\\\\fulla\\\\public\\\\icons\\\\icon-192.png\")",
+      "Bash(cp \"C:\\\\Users\\\\IsmaelPeregrinaRamir\\\\OneDrive - Christus CEI\\\\Documentos\\\\Codigo\\\\GIT\\\\DeltaHabits\\\\fulla\\\\new_images\\\\chibi1.png\" \"C:\\\\Users\\\\IsmaelPeregrinaRamir\\\\OneDrive - Christus CEI\\\\Documentos\\\\Codigo\\\\GIT\\\\DeltaHabits\\\\fulla\\\\public\\\\icons\\\\icon-512.png\")"
     ]
   }
 }
