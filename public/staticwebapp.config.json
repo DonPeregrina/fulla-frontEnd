@@ -4,7 +4,15 @@
     "exclude": ["/assets/*", "/icons/*", "/*.png", "/*.jpg", "/*.svg", "/sw.js", "/workbox-*.js", "/manifest.webmanifest"]
   },
   "mimeTypes": {
-    ".webmanifest": "application/manifest+json"
+    ".webmanifest": "application/manifest+json",
+    ".js": "application/javascript",
+    ".mjs": "application/javascript",
+    ".css": "text/css",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2"
   },
   "globalHeaders": {
     "Cache-Control": "no-cache"

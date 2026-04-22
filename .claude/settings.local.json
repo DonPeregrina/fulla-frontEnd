@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl *)",
+      "Read(//home/relic/projects/fulla/**)",
+      "Bash(rsync -a --exclude=.git --exclude=node_modules '/mnt/c/Users/IsmaelPeregrinaRamir/OneDrive - Christus CEI/Documentos/Codigo/Git/DeltaHabits/fulla/' /home/relic/projects/fulla/)",
+      "Bash(npx tsc *)",
+      "Bash(fuser 3000/tcp)",
+      "Bash(ps *)",
+      "Bash(kill 51256)",
+      "Bash(ls .github/workflows/)",
+      "Bash(ls public/staticwebapp.config.json)",
+      "Bash(git status *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git pull *)"
+    ]
+  }
+}
