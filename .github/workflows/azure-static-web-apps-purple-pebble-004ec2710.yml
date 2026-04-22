@@ -49,6 +49,30 @@ jobs:
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
+      - name: 🧹 Limpieza pre-deploy - borrar node_modules
+        run: |
+          echo "========================================"
+          echo "  Archivos ANTES de limpiar node_modules"
+          echo "========================================"
+          echo "Total de archivos en workspace:"
+          find . -not -path './.git/*' | wc -l
+          echo ""
+          echo "Borrando node_modules..."
+          rm -rf node_modules
+          echo ""
+          echo "========================================"
+          echo "  Archivos DESPUES de limpiar node_modules"
+          echo "========================================"
+          echo "Total de archivos en workspace:"
+          find . -not -path './.git/*' | wc -l
+          echo ""
+          echo "Contenido del dist/ que se va a deployar:"
+          ls -lh dist/
+          echo ""
+          echo "Total archivos en dist/:"
+          find dist/ | wc -l
+          echo "========================================"
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
