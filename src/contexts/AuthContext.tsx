@@ -58,15 +58,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const role: Role = isHost ? 'HOST' : 'USER'
 
     let token: string
-    if (isHost) {
-      const result = await authApi.loginHost(identifier.trim().toLowerCase(), password)
-      token = result.loginHost.token
-    } else {
-      const result = await authApi.loginUser(identifier.trim(), password)
-      token = result.loginUser.token
-    }
-    const session: Session = { token, role }
+    try {
+      if (isHost) {
+        const result = await authApi.loginHost(identifier.trim().toLowerCase(), password)
+        token = result.loginHost.token
+      } else {
+        const result = await authApi.loginUser(identifier.trim(), password)
+        token = result.loginUser.token
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.toLowerCase() : ''
+      const isNetworkError = err && typeof err === 'object' && 'isAxiosError' in err &&
+        (err as any).isAxiosError && (!(err as any).response || (err as any).response.status >= 500)
+      // Prisma connection pool timeout = DB dormida (llega como GraphQL error en HTTP 200)
+      const isDbSleeping = msg.includes('connection pool') || msg.includes('timed out')
 
+      if (isNetworkError || isDbSleeping) {
+        const sleeping = new Error('Sistema durmiendo')
+        ;(sleeping as any).code = 'SLEEPING'
+        throw sleeping
+      }
+      throw err
+    }
+
+    const session: Session = { token, role }
     localStorage.setItem(SESSION_KEY, JSON.stringify(session))
     await fetchCurrent(session)
   }

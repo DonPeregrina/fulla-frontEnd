@@ -336,3 +336,37 @@ export const bitacorasApi = {
       }
     `, { userId }),
 }
+
+// ─── Health / Wake-up ────────────────────────────────────────────────────────
+// Detecta si el backend está activo o dormido (Azure App Service serverless).
+// Usa fetch directo (no axios) para evitar el interceptor de auth.
+
+export const healthApi = {
+  // Usa loginHost con creds falsas para forzar una query real a la DB.
+  // { __typename } no toca la DB y siempre regresa awake — no sirve para detectar Prisma dormido.
+  // - DB activa  → respuesta rápida con "invalid credentials"       → 'awake'
+  // - DB dormida → "connection pool timeout" en body, o AbortController a 8s (Prisma tarda 10s) → 'sleeping'
+  ping: async (): Promise<'awake' | 'sleeping'> => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 8000)
+    try {
+      const res = await fetch(`${BASE_URL}/graphql`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: 'mutation { loginHost(input: { email: "ping@fulla.health", password: "ping" }) { token } }',
+        }),
+        signal: controller.signal,
+      })
+      clearTimeout(timer)
+      if (res.status >= 500) return 'sleeping'
+      const json = await res.json()
+      const errMsg: string = json?.errors?.[0]?.message ?? ''
+      if (errMsg.includes('connection pool') || errMsg.includes('timed out')) return 'sleeping'
+      return 'awake'
+    } catch {
+      clearTimeout(timer)
+      return 'sleeping'
+    }
+  },
+}
