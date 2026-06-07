@@ -4,6 +4,7 @@ import SignIn from '@/pages/SignIn'
 import HostDashboard from '@/pages/host/HostDashboard'
 import UserDashboard from '@/pages/user/UserDashboard'
 import Shell from '@/components/Shell'
+import MnesticsLogo from '@/components/MnesticsLogo'
 
 function ProtectedRoute({
   children,
@@ -21,8 +22,11 @@ function ProtectedRoute({
 
 function SplashScreen() {
   return (
-    <div className="fixed inset-0 bg-fulla-dark flex items-center justify-center">
-      <span className="text-fulla-gold text-4xl font-bold tracking-widest">FULLA</span>
+    <div className="flex flex-1 flex-col items-center justify-center bg-mn-bg min-h-dvh">
+      <MnesticsLogo size="xl" variant="reveal" className="mb-4" />
+      <span className="font-mono text-xl font-bold tracking-tight text-mn-plum lowercase">
+        mnestics<span className="text-mn-sky">.app</span>
+      </span>
     </div>
   )
 }
