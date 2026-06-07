@@ -6,7 +6,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Fulla design system
         fulla: {
           gold:   '#F0C030',
           dark:   '#2D2440',
@@ -15,10 +14,19 @@ export default {
           border: '#DDD5EE',
           green:  '#10b981',
         },
+        // mnestics identity
+        mn: {
+          plum:     '#1A1535',
+          sky:      '#5588AA',
+          skyLight: '#AADDFF',
+          gold:     '#F0C030',
+          bg:       '#EDE9F8',
+          border:   '#DDD5EE',
+        },
       },
       fontFamily: {
-        sans: ['Geist', 'system-ui', 'sans-serif'],
-        mono: ['Geist Mono', 'monospace'],
+        sans: ['"Space Mono"', 'monospace'],
+        mono: ['"Space Mono"', 'monospace'],
       },
       screens: {
         // Mobile-first breakpoints

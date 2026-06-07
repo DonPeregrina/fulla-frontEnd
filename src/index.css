@@ -1,29 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 263 30% 12%;
-    --foreground: 260 40% 95%;
-  }
-
   * {
-    @apply border-fulla-border;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
+    font-family: 'Space Mono', monospace;
   }
 
   html {
-    /* Evita el bounce scroll en iOS y permite que sea fullscreen como app nativa */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
   }
 
   body {
-    @apply bg-fulla-dark text-[#EDE9F8] font-sans antialiased;
+    @apply bg-mn-bg text-mn-plum antialiased;
     min-height: 100dvh;
-    /* Safe area para notch/home-indicator en iOS */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }

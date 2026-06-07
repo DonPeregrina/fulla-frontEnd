@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
+import { motion } from 'motion/react'
 import { toast } from 'sonner'
-import { CheckCircle2, X, History, Pencil } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { CheckCircle2, X, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getNudos, getHiloNombre, getNudoNombre, respuestasApi } from '@/services/api'
+import { getNudos, getHiloNombre, respuestasApi } from '@/services/api'
 import { nudoColor, type Pregunta, type Respuesta } from '@/types'
-import { todayISO, formatDate } from '@/lib/utils'
+import { todayISO } from '@/lib/utils'
 import { BraidCanvas, type HiloCanvas } from '@/components/BraidCanvas'
 
 function isToday(createdAt: string): boolean {
@@ -18,8 +17,6 @@ function isToday(createdAt: string): boolean {
   return d.toISOString().split('T')[0] === today
 }
 
-// ─── Tipos internos ───────────────────────────────────────────────────────────
-
 interface NudoConHilos {
   id: string
   name: string
@@ -28,33 +25,46 @@ interface NudoConHilos {
   preguntas: Pregunta[]
 }
 
+type MomentState = 'calm' | 'query' | 'reveal' | 'insight'
+
+function getMomentState(answered: number, total: number): MomentState {
+  if (total === 0) return 'calm'
+  const p = answered / total
+  if (p === 0) return 'calm'
+  if (p < 0.5) return 'query'
+  if (p < 1) return 'reveal'
+  return 'insight'
+}
+
+const STATE_DOT_COLORS: Record<MomentState, string> = {
+  calm: '#5588AA',
+  query: '#F0C030',
+  reveal: '#AADDFF',
+  insight: '#10b981',
+}
+
+function hiloCode(id: string): string {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
+  return `UN-${(Math.abs(hash) % 9000) + 1000}`
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function Skeleton() {
   return (
-    <div className="px-4 space-y-8">
-      {[1, 2].map(i => (
-        <div key={i} className="space-y-3 animate-pulse">
-          <div className="flex justify-center"><div className="h-3 w-24 bg-[#DDD5EE] rounded-full" /></div>
-          <div className="h-[340px] w-full bg-[#DDD5EE] rounded-2xl" />
-        </div>
-      ))}
+    <div className="flex h-full items-center justify-center p-8 text-center">
+      <div className="space-y-3">
+        <div className="h-6 w-6 rounded-full border-2 border-dashed border-[#F0C030] animate-[spin_4s_linear_infinite] mx-auto" />
+        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-mn-sky animate-pulse">SYNCHRONIZING…</p>
+      </div>
     </div>
   )
 }
 
-// ─── Modal de respuestas (preguntas de un Hilo dentro de un Nudo) ─────────────
+// ─── HiloModal ────────────────────────────────────────────────────────────────
 
-function HiloModal({
-  nudo,
-  hilo,
-  preguntas,
-  respuestasHoyMap,
-  guardando,
-  onGuardar,
-  open,
-  onClose,
-}: {
+function HiloModal({ nudo, hilo, preguntas, respuestasHoyMap, guardando, onGuardar, open, onClose }: {
   nudo: NudoConHilos
   hilo: HiloCanvas
   preguntas: Pregunta[]
@@ -78,11 +88,7 @@ function HiloModal({
       return next
     })
   }
-
-  function draft(p: Pregunta) {
-    return drafts[p.id] ?? respuestasHoyMap[p.id]?.body ?? ''
-  }
-
+  function draft(p: Pregunta) { return drafts[p.id] ?? respuestasHoyMap[p.id]?.body ?? '' }
   function handleSave(p: Pregunta) {
     const val = draft(p).trim()
     if (!val) return
@@ -93,52 +99,42 @@ function HiloModal({
   return (
     <Dialog.Root open={open} onOpenChange={o => { if (!o) onClose() }}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
         <Dialog.Content
-          className="fixed inset-x-4 top-[8%] z-50 rounded-[28px] border-2 border-[#C8BEE0] bg-[#EDE9F8] p-6 max-w-sm mx-auto focus:outline-none"
+          className="fixed inset-x-4 top-[8%] z-50 rounded-[28px] border border-[#5588AA]/30 bg-[#1A1535] p-6 max-w-sm mx-auto focus:outline-none"
           style={{ maxHeight: '80vh', overflowY: 'auto' }}
         >
           <div className="flex items-center justify-between mb-5">
             <div>
-              <p className="text-[8px] font-bold uppercase tracking-[.2em] text-[#B0A8CC]">{nudo.name}</p>
+              <p className="text-[7px] font-bold uppercase tracking-[0.2em] text-mn-sky">{nudo.name}</p>
               <div className="flex items-center gap-2 mt-0.5">
-                <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: hilo.color }} />
-                <Dialog.Title className="text-[10px] font-bold uppercase tracking-[.2em] text-[#2D2440]">
-                  {hilo.name}
+                <div className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: hilo.color }} />
+                <Dialog.Title className="text-[10px] font-bold uppercase tracking-[0.2em] text-white">
+                  MEM REVEAL: {hilo.name}
                 </Dialog.Title>
               </div>
             </div>
             <Dialog.Close asChild>
-              <button className="flex h-7 w-7 items-center justify-center rounded-full bg-white/50 text-[#8878AA] hover:text-[#2D2440] transition-colors">
+              <button className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[#5588AA] hover:text-white transition-colors">
                 <X className="h-4 w-4" />
               </button>
             </Dialog.Close>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {preguntas.map(p => {
               const resp = respuestasHoyMap[p.id]
               const isAnswered = !!resp && !isEditando(p.id)
               const val = draft(p)
-
               return (
-                <div
-                  key={p.id}
-                  className={`rounded-2xl border-2 p-4 space-y-3 transition-all ${resp ? 'border-[#C4BAD8] bg-white/50' : 'border-[#DDD5EE] bg-white'}`}
-                >
-                  <p className="text-[10px] font-bold leading-relaxed text-[#2D2440] uppercase tracking-wide">
-                    {p.body}
-                  </p>
+                <div key={p.id} className={`rounded-2xl border p-4 space-y-3 transition-all ${resp ? 'border-[#5588AA]/40 bg-white/5' : 'border-[#2D2440] bg-white/3'}`}>
+                  <p className="text-[9px] font-bold leading-relaxed text-white uppercase tracking-wide">{p.body}</p>
                   {isAnswered ? (
                     <div className="flex items-center gap-2">
                       <CheckCircle2 size={14} style={{ color: hilo.color }} className="shrink-0" />
-                      <span className="text-xs text-[#5A4A7A] flex-1">{resp.body}</span>
-                      <button
-                        onClick={() => toggleEdit(p)}
-                        className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-[#DDD5EE] transition-colors shrink-0"
-                        title="Editar"
-                      >
-                        <Pencil size={11} className="text-[#B0A8CC]" />
+                      <span className="text-xs text-[#AADDFF] flex-1">{resp.body}</span>
+                      <button onClick={() => toggleEdit(p)} className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/10 transition-colors shrink-0">
+                        <Pencil size={11} className="text-mn-sky" />
                       </button>
                     </div>
                   ) : (
@@ -147,15 +143,15 @@ function HiloModal({
                         value={val}
                         onChange={e => setDrafts(d => ({ ...d, [p.id]: e.target.value }))}
                         onKeyDown={e => e.key === 'Enter' && handleSave(p)}
-                        placeholder="Tu respuesta…"
+                        placeholder="Reveal data…"
                         autoFocus={isEditando(p.id)}
-                        className="flex-1 bg-white border border-[#DDD5EE] rounded-xl px-3 py-2 text-xs text-[#2D2440] placeholder:text-[#B0A8CC] focus:outline-none focus:border-[#F0C030] transition-colors"
+                        className="flex-1 bg-[#2D2440] border border-[#5588AA]/30 rounded-xl px-3 py-2 text-xs text-white placeholder:text-[#5588AA] focus:outline-none focus:border-[#F0C030] transition-colors font-mono"
                       />
                       <button
                         onClick={() => handleSave(p)}
                         disabled={!val.trim() || guardando}
-                        className="px-3 py-2 rounded-xl text-xs font-black tracking-wider uppercase disabled:opacity-40 active:scale-95 transition-all"
-                        style={{ backgroundColor: hilo.color, color: '#fff' }}
+                        className="px-3 py-2 rounded-xl text-[9px] font-bold tracking-wider uppercase disabled:opacity-40 active:scale-95 transition-all"
+                        style={{ backgroundColor: hilo.color, color: '#1A1535' }}
                       >
                         {guardando ? '…' : 'OK'}
                       </button>
@@ -168,47 +164,14 @@ function HiloModal({
 
           <button
             onClick={onClose}
-            className="mt-6 w-full bg-[#F0C030] hover:bg-[#FFDD55] text-[#2D2440] font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl shadow transition-transform active:scale-95"
+            className="mt-6 w-full font-bold uppercase text-[9px] tracking-[0.2em] py-4 rounded-2xl transition-transform active:scale-95"
+            style={{ backgroundColor: '#F0C030', color: '#1A1535' }}
           >
-            CONFIRMAR
+            INTEGRATE REVEAL
           </button>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  )
-}
-
-// ─── Resumen del Nudo ─────────────────────────────────────────────────────────
-
-function NudoResumen({ preguntas, respuestasHoy }: { preguntas: Pregunta[]; respuestasHoy: Respuesta[] }) {
-  const answered = respuestasHoy.filter(r => preguntas.some(p => p.id === r.questionId)).length
-  const total = preguntas.length
-  const isComplete = total > 0 && answered === total
-
-  return (
-    <div className="px-4">
-      <div className="flex items-center justify-between p-3 rounded-2xl border-2 border-dashed border-[#DDD5EE] bg-white/30">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white shadow-sm border border-[#DDD5EE]">
-            <History className="h-4 w-4 text-[#F0C030]" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-[#2D2440] uppercase tracking-wider">{answered}/{total}</p>
-            <p className="text-[8px] font-bold text-[#B0A8CC] uppercase">Respondidas</p>
-          </div>
-        </div>
-        <div className="h-6 w-1 bg-[#DDD5EE] rounded-full" />
-        <div className="text-right">
-          <p className="text-[9px] font-bold text-[#2D2440] uppercase">{isComplete ? 'COMPLETO' : 'EN CURSO'}</p>
-          <div className="flex gap-1 justify-end mt-1">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-1 w-2 rounded-full"
-                style={{ backgroundColor: i < Math.ceil((answered / total) * 4) ? '#F0C030' : '#DDD5EE' }} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -220,15 +183,10 @@ export default function NudosTab() {
   const qc = useQueryClient()
 
   const [seleccion, setSeleccion] = useState<{ nudo: NudoConHilos; hilo: HiloCanvas } | null>(null)
+  const [activeNudoIdx, setActiveNudoIdx] = useState(0)
 
-  // Nudos (hardcodeados hasta que backend exponga categories con user token)
-  const { data: nudosRaw } = useQuery({
-    queryKey: ['nudos'],
-    queryFn: getNudos,
-    staleTime: Infinity,
-  })
+  const { data: nudosRaw } = useQuery({ queryKey: ['nudos'], queryFn: getNudos, staleTime: Infinity })
 
-  // Todas las respuestas del usuario con preguntas embebidas
   const { data: respuestasData, isLoading } = useQuery({
     queryKey: ['respuestas-all', userId],
     queryFn: () => respuestasApi.list(userId),
@@ -241,136 +199,223 @@ export default function NudosTab() {
       if (respuestaId) { await respuestasApi.update(respuestaId, body); return }
       await respuestasApi.create(questionId, body)
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['respuestas-all', userId] })
-      toast.success('Respuesta guardada')
-    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['respuestas-all', userId] }); toast.success('Respuesta guardada') },
     onError: () => toast.error('No se pudo guardar'),
   })
 
   const todasRespuestas: Respuesta[] = respuestasData?.answers ?? []
-
-  // Preguntas únicas derivadas del historial
   const preguntasMap: Record<string, Pregunta> = {}
   todasRespuestas.forEach(r => { if (r.question) preguntasMap[r.question.id] = r.question })
   const todasPreguntas = Object.values(preguntasMap)
 
-  // Respuestas de hoy
   const respuestasHoy = todasRespuestas.filter(r => isToday(r.createdAt))
   const respuestasHoyMap = Object.fromEntries(respuestasHoy.map(r => [r.questionId, r]))
 
-  // Construir estructura: Nudo → Hilos → Preguntas
   const nudosConHilos: NudoConHilos[] = (nudosRaw ?? [])
     .map((nudo, nudoIdx) => {
       const nudoPreguntas = todasPreguntas.filter(p => p.categoryId === nudo.id)
       if (nudoPreguntas.length === 0) return null
-
-      // Hilos únicos dentro de este nudo (derivados de answer.question.groupId)
       const hiloIds = [...new Set(nudoPreguntas.map(p => p.groupId))]
       const hilos: HiloCanvas[] = hiloIds.map((hiloId, j) => ({
         id: hiloId,
         name: getHiloNombre(hiloId),
         color: nudoColor(hiloId, nudoIdx * 3 + j),
       }))
-
-      return {
-        id: nudo.id,
-        name: nudo.name,
-        color: nudoColor(nudo.id, nudoIdx),
-        hilos,
-        preguntas: nudoPreguntas,
-      }
+      return { id: nudo.id, name: nudo.name, color: nudoColor(nudo.id, nudoIdx), hilos, preguntas: nudoPreguntas }
     })
     .filter((n): n is NudoConHilos => n !== null)
 
-  // Progreso global de hoy
-  const totalHoy = todasPreguntas.length
-  const respondidosHoy = respuestasHoy.length
-  const pctGlobal = totalHoy > 0 ? Math.round((respondidosHoy / totalHoy) * 100) : 0
+  const safeIdx = Math.min(activeNudoIdx, Math.max(0, nudosConHilos.length - 1))
+  const activeNudo = nudosConHilos[safeIdx] ?? null
 
-  const hour = new Date().getHours()
-  const turno = hour < 12 ? 'Mañana' : hour < 18 ? 'Tarde' : 'Noche'
-  const nombre = current && 'username' in current ? current.username : 'tú'
+  const nudoAnswered = activeNudo ? respuestasHoy.filter(r => activeNudo.preguntas.some(p => p.id === r.questionId)).length : 0
+  const nudoTotal = activeNudo?.preguntas.length ?? 0
+  const momentState = getMomentState(nudoAnswered, nudoTotal)
+
+  // Primera pregunta sin responder del hilo seleccionado
+  const hiloSeleccionado = seleccion ? activeNudo?.hilos.find(h => h.id === seleccion.hilo.id) : null
+  const preguntasPendientes = hiloSeleccionado
+    ? (activeNudo?.preguntas.filter(p => p.groupId === hiloSeleccionado.id && !respuestasHoyMap[p.id]) ?? [])
+    : []
+  const firstUnanswered = preguntasPendientes[0]
+
+  function goNext() { setActiveNudoIdx(i => Math.min(nudosConHilos.length - 1, i + 1)); setSeleccion(null) }
+  function goPrev() { setActiveNudoIdx(i => Math.max(0, i - 1)); setSeleccion(null) }
+
+  if (isLoading) return <Skeleton />
+
+  if (nudosConHilos.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+        <CheckCircle2 className="mb-4 h-12 w-12 text-[#DDD5EE]" />
+        <h3 className="text-[10px] font-bold uppercase tracking-widest text-mn-plum">Sin preguntas asignadas</h3>
+        <p className="text-[9px] text-mn-sky mt-2">Tu coordinador te agregará a un hilo pronto.</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-col min-h-full bg-[#EDE9F8] overflow-y-auto pb-24">
-      {/* Header */}
-      <div className="px-5 pt-6 pb-4">
-        <p className="text-[10px] uppercase tracking-[.15em] text-[#5A4A7A]">
-          {turno} · {format(new Date(), "d 'de' MMMM", { locale: es })}
-        </p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <img src="/logo_png.png" alt="" className="w-7 h-7 object-contain opacity-80" />
-          <h1 className="text-xl font-black tracking-tight text-[#2D2440]">
-            Hola, {nombre}
-          </h1>
-        </div>
-        {totalHoy > 0 && (
-          <div className="mt-3 space-y-1.5">
-            <div className="flex justify-between text-[9px] font-bold text-[#B0A8CC] uppercase tracking-widest">
-              <span>{respondidosHoy}/{totalHoy} respuestas hoy</span>
-              <span>{pctGlobal}%</span>
-            </div>
-            <div className="h-1.5 bg-[#DDD5EE] rounded-full overflow-hidden">
-              <div className="h-full bg-[#F0C030] rounded-full transition-all duration-500" style={{ width: `${pctGlobal}%` }} />
-            </div>
-          </div>
-        )}
+    <motion.div
+      className="flex flex-col min-h-full bg-mn-bg pb-24 select-none"
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.1}
+      onDragEnd={(_, info) => {
+        if (info.offset.x < -50) goNext()
+        else if (info.offset.x > 50) goPrev()
+      }}
+    >
+      {/* 1) Barra de navegación de tiempo */}
+      <div className="flex items-center gap-2 px-4 pt-4 pb-2 shrink-0">
+        <button onClick={goPrev} disabled={safeIdx === 0} className="p-1 text-mn-plum disabled:opacity-30 hover:text-mn-sky transition-colors">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="h-[1px] flex-1 bg-[#DDD5EE]" />
+        <span className="font-mono text-[8px] font-bold text-mn-plum tracking-[0.16em] uppercase whitespace-nowrap">
+          // {hiloCode(activeNudo?.id ?? 'x')} · {activeNudo?.name ?? '–'}
+        </span>
+        <div className="h-[1px] flex-1 bg-[#DDD5EE]" />
+        <button onClick={goNext} disabled={safeIdx === nudosConHilos.length - 1} className="p-1 text-mn-plum disabled:opacity-30 hover:text-mn-sky transition-colors">
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
 
-      {/* Content */}
-      {isLoading ? (
-        <Skeleton />
-      ) : nudosConHilos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-          <CheckCircle2 className="mb-4 h-12 w-12 text-[#DDD5EE]" />
-          <h3 className="text-sm font-bold uppercase tracking-widest text-[#5A4A7A]">Sin preguntas asignadas</h3>
-          <p className="text-[10px] text-[#B0A8CC] mt-2 leading-relaxed">Tu coordinador te agregará a un hilo pronto.</p>
-        </div>
-      ) : (
-        <div className="space-y-12 pb-4">
-          {nudosConHilos.map(nudo => {
-            const answered = respuestasHoy.filter(r => nudo.preguntas.some(p => p.id === r.questionId)).length
-            const isComplete = answered === nudo.preguntas.length
+      {/* 2) State matrix — time options con nombres reales */}
+      <div className="px-4 mb-2 shrink-0 overflow-x-auto">
+        <div className="flex items-center justify-between min-w-0 gap-1">
+          {nudosConHilos.map((nudo, i) => {
+            const ans = respuestasHoy.filter(r => nudo.preguntas.some(p => p.id === r.questionId)).length
+            const state = getMomentState(ans, nudo.preguntas.length)
+            const isActive = i === safeIdx
+            const dotColor = isActive ? '#1A1535' : STATE_DOT_COLORS[state]
 
             return (
-              <div key={nudo.id} className="space-y-2">
-                {/* Header del Nudo */}
-                <div className="flex flex-col items-center justify-center gap-1 py-2 bg-gradient-to-r from-transparent via-[#DDD5EE]/20 to-transparent">
-                  <div className="flex items-center gap-3">
-                    <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: isComplete ? '#F0C030' : '#C4BAD8' }} />
-                    <span className="text-[9px] font-bold uppercase tracking-[.25em]"
-                      style={{ color: isComplete ? '#2D2440' : '#B0A8CC' }}>
-                      {nudo.name}{isComplete ? ' · COMPLETO' : ''}
-                    </span>
-                    <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: isComplete ? '#F0C030' : '#C4BAD8' }} />
-                  </div>
-                  <span className="text-[8px] text-[#B0A8CC] tracking-wider">
-                    {formatDate(todayISO(), "EEEE d 'de' MMM")}
-                  </span>
-                </div>
-
-                {/* BraidCanvas — satélites = Hilos */}
-                <BraidCanvas
-                  hilos={nudo.hilos}
-                  preguntas={nudo.preguntas}
-                  respuestas={respuestasHoy.filter(r => nudo.preguntas.some(p => p.id === r.questionId))}
-                  hiloActivoId={seleccion?.nudo.id === nudo.id ? seleccion.hilo.id : null}
-                  onHiloClick={(hiloId) => {
-                    const hilo = nudo.hilos.find(h => h.id === hiloId)
-                    if (hilo) setSeleccion({ nudo, hilo })
+              <button
+                key={nudo.id}
+                onClick={() => { setActiveNudoIdx(i); setSeleccion(null) }}
+                className="flex flex-col items-center gap-0.5 focus:outline-none transition-all hover:scale-105 flex-1 min-w-0"
+              >
+                <div
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: isActive ? 8 : 6,
+                    height: isActive ? 8 : 6,
+                    backgroundColor: dotColor,
                   }}
                 />
-
-                {/* Resumen */}
-                <NudoResumen preguntas={nudo.preguntas} respuestasHoy={respuestasHoy} />
-              </div>
+                <span
+                  className="font-mono tracking-[0.06em] uppercase transition-colors truncate w-full text-center"
+                  style={{
+                    fontSize: '6px',
+                    color: isActive ? '#1A1535' : '#B0A8CC',
+                    fontWeight: isActive ? 700 : 400,
+                  }}
+                >
+                  {nudo.name}
+                </span>
+              </button>
             )
           })}
         </div>
+      </div>
+
+      {/* 3) BraidCanvas */}
+      {activeNudo && (
+        <div className="px-4 pb-2">
+          <BraidCanvas
+            hilos={activeNudo.hilos}
+            preguntas={activeNudo.preguntas}
+            respuestas={respuestasHoy.filter(r => activeNudo.preguntas.some(p => p.id === r.questionId))}
+            hiloActivoId={seleccion?.hilo.id ?? null}
+            onHiloClick={(hiloId) => {
+              const hilo = activeNudo.hilos.find(h => h.id === hiloId)
+              if (hilo) setSeleccion({ nudo: activeNudo, hilo })
+            }}
+            momentState={momentState}
+          />
+        </div>
       )}
 
-      {/* Modal de respuestas por Hilo */}
+      {/* 4) Panel HUD — 2 secciones */}
+      {activeNudo && (
+        <div className="mx-4 mt-1 bg-white border border-[#DDD5EE] rounded-[24px] overflow-hidden shadow-sm flex flex-col p-4 space-y-3">
+
+          {/* Sección superior: archivo seleccionado o hint */}
+          <div className="min-h-[48px]">
+            {seleccion && hiloSeleccionado ? (
+              <div>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="font-mono text-[8px] font-bold tracking-[0.1em] uppercase"
+                    style={{ color: hiloSeleccionado.color }}
+                  >
+                    // {hiloCode(hiloSeleccionado.id)} · {hiloSeleccionado.name}
+                  </span>
+                  <span className="font-mono text-[7px] text-mn-sky uppercase font-bold tracking-widest animate-pulse">
+                    Conexión Activa
+                  </span>
+                </div>
+                <div className="font-mono text-[10px] text-mn-plum mt-2 leading-relaxed line-clamp-2">
+                  {firstUnanswered ? (
+                    <span>&gt; {firstUnanswered.body}</span>
+                  ) : (
+                    <span className="text-mn-sky italic">core synched — node sequence active.</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="font-mono text-[8px] font-bold text-mn-sky tracking-[0.1em] uppercase">
+                  // ACTIVE MATRIX STATUS
+                </div>
+                <div className="font-mono text-[9px] text-[#B0A8CC] mt-2 italic">
+                  _ select any node above on the channel lines to integrate state...
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sección inferior: progreso */}
+          <div className="border-t border-[#EDE9F8] pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-mono text-[8px] font-bold text-mn-sky tracking-[0.1em] uppercase">
+                // SYNC METRIC
+              </span>
+              <span className="font-mono text-[9px] font-bold text-mn-plum tracking-widest">
+                {nudoAnswered}/{nudoTotal} SECURED
+              </span>
+            </div>
+
+            <div className="relative h-5 bg-[#FAF9FD] border border-[#DDD5EE] rounded-xl overflow-hidden flex items-center p-0.5">
+              <div
+                className="h-full bg-mn-plum rounded-lg transition-all duration-500"
+                style={{ width: nudoTotal > 0 ? `${Math.round((nudoAnswered / nudoTotal) * 100)}%` : '0%' }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className={`font-mono text-[8px] font-bold tracking-[0.1em] ${nudoAnswered / Math.max(nudoTotal, 1) > 0.55 ? 'text-white' : 'text-mn-plum'}`}>
+                  {nudoTotal > 0 ? Math.round((nudoAnswered / nudoTotal) * 100) : 0}% COMPLETE
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-1.5 mt-2">
+              {activeNudo.preguntas.map(p => {
+                const answered = !!respuestasHoyMap[p.id]
+                const hiloColor = activeNudo.hilos.find(h => h.id === p.groupId)?.color ?? '#F0C030'
+                return (
+                  <div
+                    key={p.id}
+                    className="flex-1 h-1 rounded-sm transition-all"
+                    style={{ backgroundColor: answered ? hiloColor : '#EDE9F8' }}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal */}
       {seleccion && (
         <HiloModal
           nudo={seleccion.nudo}
@@ -383,6 +428,6 @@ export default function NudosTab() {
           onClose={() => setSeleccion(null)}
         />
       )}
-    </div>
+    </motion.div>
   )
 }

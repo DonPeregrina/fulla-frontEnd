@@ -1,0 +1,11 @@
+{
+  "name": "Mnestics",
+  "description": "Mnestics: A stable memory core and dynamic conversational reveal system with a premium indie HUD aesthetic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "PWA",
+    "Offline Support",
+    "Habit Tracking",
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

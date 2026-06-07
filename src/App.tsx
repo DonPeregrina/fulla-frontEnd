@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import SignIn from '@/pages/SignIn'
 import HostDashboard from '@/pages/host/HostDashboard'
 import UserDashboard from '@/pages/user/UserDashboard'
+import Shell from '@/components/Shell'
 
 function ProtectedRoute({
   children,
@@ -29,9 +30,10 @@ function SplashScreen() {
 export default function App() {
   const { session, loading } = useAuth()
 
-  if (loading) return <SplashScreen />
+  if (loading) return <Shell><SplashScreen /></Shell>
 
   return (
+    <Shell>
     <Routes>
       <Route
         path="/"
@@ -60,5 +62,6 @@ export default function App() {
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Shell>
   )
 }
