@@ -57,7 +57,7 @@ export default function UserDashboard() {
       <TopNavBar avatarInitial={avatarInitial} />
       <StreakRow respuestas={respuestas} />
 
-      <main className="flex-1 overflow-y-auto" style={{ paddingTop: 'calc(3rem + env(safe-area-inset-top) + 2.25rem)' }}>
+      <main className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

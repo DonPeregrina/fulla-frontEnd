@@ -6,8 +6,7 @@ interface TopNavBarProps {
 
 export default function TopNavBar({ avatarInitial }: TopNavBarProps) {
   return (
-    <header className="fixed top-0 inset-x-0 z-40 flex items-center justify-between bg-[#1A1535] px-4 py-2.5 border-b border-[#2D2440] shadow-sm select-none"
-      style={{ paddingTop: `calc(0.625rem + env(safe-area-inset-top))` }}
+    <header className="sticky top-0 z-40 flex items-center justify-between bg-[#1A1535] px-4 py-2.5 border-b border-[#2D2440] shadow-sm select-none"
     >
       <div className="flex items-center gap-2">
         <MnesticsLogo size="sm" variant="reveal" />
@@ -18,7 +17,7 @@ export default function TopNavBar({ avatarInitial }: TopNavBarProps) {
 
       <div className="flex items-center gap-2">
         <span className="text-[7.5px] font-bold text-[#5588AA] tracking-widest uppercase bg-[#2D2440]/60 px-2 py-0.5 rounded-full border border-[#5588AA]/20">
-          BUILD 0607-C
+          BUILD 0607-G
         </span>
         <div className="h-7 w-7 rounded-lg border border-[#5588AA]/30 bg-[#2D2440] flex items-center justify-center overflow-hidden">
           {avatarInitial ? (

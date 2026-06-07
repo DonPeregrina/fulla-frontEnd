@@ -166,12 +166,12 @@ export const BraidCanvas: React.FC<BraidCanvasProps> = ({
 
         const iL = i % 2 === 0
         let topOffset = 42
-        if (hilos.length === 1) topOffset = 90
-        else if (hilos.length === 2) topOffset = i === 0 ? 64 : 144
-        else topOffset = 42 + i * 56
+        if (hilos.length === 1) topOffset = 110
+        else if (hilos.length === 2) topOffset = i === 0 ? 70 : 170
+        else topOffset = 42 + i * 68
 
-        const px = iL ? 68 : W - 68
-        const py = topOffset + 18
+        const px = iL ? 80 : W - 80
+        const py = topOffset + 22
 
         ctx.beginPath()
         ctx.moveTo(px, py)
@@ -199,7 +199,7 @@ export const BraidCanvas: React.FC<BraidCanvasProps> = ({
     const handleResize = () => {
       if (containerRef.current) {
         canvas.width = containerRef.current.clientWidth
-        canvas.height = 240
+        canvas.height = 300
         initPixels()
       }
     }
@@ -209,10 +209,10 @@ export const BraidCanvas: React.FC<BraidCanvasProps> = ({
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', handleResize) }
   }, [hilos, preguntas, respuestas, momentState])
 
-  const CARD_W = 108
+  const CARD_W = 132
 
   return (
-    <div ref={containerRef} className="relative h-[240px] w-full select-none overflow-hidden rounded-[24px] border-2 border-[#DDD5EE] bg-[#FAF9FD]">
+    <div ref={containerRef} className="relative h-[300px] w-full select-none overflow-hidden rounded-[24px] border-2 border-[#DDD5EE] bg-[#FAF9FD]">
       <canvas ref={canvasRef} className="block w-full h-full" />
 
       {/* Hilo file cards */}
@@ -226,9 +226,9 @@ export const BraidCanvas: React.FC<BraidCanvasProps> = ({
           const iL = i % 2 === 0
 
           let topOffset = 42
-          if (hilos.length === 1) topOffset = 90
-          else if (hilos.length === 2) topOffset = i === 0 ? 64 : 144
-          else topOffset = 42 + i * 56
+          if (hilos.length === 1) topOffset = 110
+          else if (hilos.length === 2) topOffset = i === 0 ? 70 : 170
+          else topOffset = 42 + i * 68
 
           const left = iL ? '4px' : `calc(100% - ${CARD_W}px - 4px)`
           const code = hiloCode(hilo.id)
@@ -246,10 +246,10 @@ export const BraidCanvas: React.FC<BraidCanvasProps> = ({
                 style={{ backgroundColor: hilo.color, boxShadow: active ? `0 0 6px ${hilo.color}` : 'none', opacity: active ? 1 : 0.4 }}
               />
               <div className="overflow-hidden">
-                <div className="font-mono text-[7px] font-bold leading-none uppercase" style={{ color: isActive ? '#AADDFF' : (active ? hilo.color : '#5588AA') }}>
+                <div className="font-mono text-[10px] font-bold leading-none uppercase" style={{ color: isActive ? '#AADDFF' : (active ? hilo.color : '#5588AA') }}>
                   {code}
                 </div>
-                <div className={`font-mono text-[8.5px] font-bold truncate tracking-tight mt-0.5 leading-none uppercase ${isActive ? 'text-white' : 'text-[#1A1535]'}`}>
+                <div className={`font-mono text-[12px] font-bold truncate tracking-tight mt-1 leading-none uppercase ${isActive ? 'text-white' : 'text-[#1A1535]'}`}>
                   {hilo.name}
                 </div>
                 {/* Micro-dots: one per question */}

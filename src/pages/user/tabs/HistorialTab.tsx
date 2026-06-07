@@ -114,23 +114,24 @@ export default function HistorialTab() {
                     isSelected
                       ? 'bg-mn-plum text-white shadow-[2px_2px_0px_#F0C030]'
                       : hasAnswers
-                        ? 'bg-[#1A1535] text-transparent hover:opacity-80'
+                        ? 'bg-[#1A1535] hover:opacity-80'
                         : 'hover:bg-mn-bg text-mn-sky'
                   }`}
                   style={{ gridColumnStart: i === 0 ? day.getDay() + 1 : undefined }}
                 >
-                  {/* Día número */}
-                  <span className={`relative z-10 ${isSelected ? 'text-white' : hasAnswers ? 'text-transparent' : ''}`}>
+                  {/* Día número — azul claro sobre fondo oscuro, blanco cuando seleccionado */}
+                  <span
+                    className="relative z-10 text-[10px] font-bold"
+                    style={{ color: isSelected ? '#fff' : hasAnswers ? '#AADDFF' : undefined }}
+                  >
                     {format(day, 'd')}
                   </span>
 
-                  {/* Estilo "REDACTED" cuando tiene respuestas y no está seleccionado */}
+                  {/* Barra redacted + badge de conteo */}
                   {hasAnswers && !isSelected && (
                     <>
-                      {/* Barra redacted */}
-                      <div className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[7px] bg-[#AADDFF]/20 rounded-[1px]" />
-                      {/* Badge con el conteo */}
-                      <span className="absolute top-0.5 right-0.5 text-[6px] font-bold text-[#F0C030] leading-none z-20">
+                      <div className="absolute inset-x-1.5 top-1/2 -translate-y-1/2 h-[5px] bg-[#AADDFF]/10 rounded-[1px]" />
+                      <span className="absolute bottom-0.5 right-1 text-[7px] font-bold text-[#F0C030] leading-none z-20">
                         {count}
                       </span>
                     </>

@@ -128,13 +128,13 @@ function HiloModal({ nudo, hilo, preguntas, respuestasHoyMap, guardando, onGuard
               const val = draft(p)
               return (
                 <div key={p.id} className={`rounded-2xl border p-4 space-y-3 transition-all ${resp ? 'border-[#5588AA]/40 bg-white/5' : 'border-[#2D2440] bg-white/3'}`}>
-                  <p className="text-[9px] font-bold leading-relaxed text-white uppercase tracking-wide">{p.body}</p>
+                  <p className="text-[11px] font-bold leading-relaxed text-white uppercase tracking-wide">{p.body}</p>
                   {isAnswered ? (
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 size={14} style={{ color: hilo.color }} className="shrink-0" />
-                      <span className="text-xs text-[#AADDFF] flex-1">{resp.body}</span>
-                      <button onClick={() => toggleEdit(p)} className="flex items-center justify-center w-6 h-6 rounded-full hover:bg-white/10 transition-colors shrink-0">
-                        <Pencil size={11} className="text-mn-sky" />
+                      <CheckCircle2 size={16} style={{ color: hilo.color }} className="shrink-0" />
+                      <span className="text-sm text-[#AADDFF] flex-1">{resp.body}</span>
+                      <button onClick={() => toggleEdit(p)} className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-white/10 transition-colors shrink-0">
+                        <Pencil size={13} className="text-mn-sky" />
                       </button>
                     </div>
                   ) : (
@@ -145,12 +145,12 @@ function HiloModal({ nudo, hilo, preguntas, respuestasHoyMap, guardando, onGuard
                         onKeyDown={e => e.key === 'Enter' && handleSave(p)}
                         placeholder="Reveal data…"
                         autoFocus={isEditando(p.id)}
-                        className="flex-1 bg-[#2D2440] border border-[#5588AA]/30 rounded-xl px-3 py-2 text-xs text-white placeholder:text-[#5588AA] focus:outline-none focus:border-[#F0C030] transition-colors font-mono"
+                        className="flex-1 bg-[#2D2440] border border-[#5588AA]/30 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-[#5588AA] focus:outline-none focus:border-[#F0C030] transition-colors font-mono"
                       />
                       <button
                         onClick={() => handleSave(p)}
                         disabled={!val.trim() || guardando}
-                        className="px-3 py-2 rounded-xl text-[9px] font-bold tracking-wider uppercase disabled:opacity-40 active:scale-95 transition-all"
+                        className="px-4 py-2.5 rounded-xl text-[11px] font-bold tracking-wider uppercase disabled:opacity-40 active:scale-95 transition-all"
                         style={{ backgroundColor: hilo.color, color: '#1A1535' }}
                       >
                         {guardando ? '…' : 'OK'}
@@ -266,7 +266,7 @@ export default function NudosTab() {
       }}
     >
       {/* 1) Barra de navegación de tiempo */}
-      <div className="flex items-center gap-2 px-4 pt-4 pb-2 shrink-0">
+      <div className="flex items-center gap-2 px-4 pt-1 pb-2 shrink-0">
         <button onClick={goPrev} disabled={safeIdx === 0} className="p-1 text-mn-plum disabled:opacity-30 hover:text-mn-sky transition-colors">
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -306,7 +306,7 @@ export default function NudosTab() {
                 <span
                   className="font-mono tracking-[0.06em] uppercase transition-colors truncate w-full text-center"
                   style={{
-                    fontSize: '6px',
+                    fontSize: '8px',
                     color: isActive ? '#1A1535' : '#B0A8CC',
                     fontWeight: isActive ? 700 : 400,
                   }}
