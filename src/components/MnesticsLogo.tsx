@@ -53,23 +53,45 @@ export default function MnesticsLogo({ variant = 'reveal', size = 'md', classNam
         </div>
       )}
 
-      {/* Símbolo Mu */}
+      {/* Símbolo Mu estilizado — proporciones tipográficas griegas */}
       <svg
-        viewBox="0 0 100 100"
+        viewBox="0 0 100 110"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={`relative z-10 ${isMinimal ? 'h-full w-full' : 'h-[64%] w-[64%]'}`}
+        className={`relative z-10 ${isMinimal ? 'h-full w-full' : 'h-[68%] w-[68%]'}`}
       >
+        {/* Pata izquierda — vertical con serifas */}
+        <line x1="26" y1="22" x2="26" y2="72" stroke="#F0C030" strokeWidth="9" strokeLinecap="round" />
+
+        {/* Arco central — curva elegante que sube al centro y baja */}
         <path
-          d="M 36,28 L 36,60 C 36,64 38,66 42,66 C 46,66 48,64 48,60 L 48,46 C 48,36 54,30 62,30 C 70,30 74,36 74,45 L 74,66"
+          d="M 26,72 C 26,84 34,90 43,88 C 52,86 55,78 55,68 L 55,52"
           stroke="#F0C030"
-          strokeWidth="11"
+          strokeWidth="9"
           strokeLinecap="round"
           strokeLinejoin="round"
+          fill="none"
         />
-        <circle cx="36" cy="78" r="6.5" fill="#F0C030" />
+
+        {/* Pata derecha — vertical limpia */}
+        <line x1="55" y1="22" x2="55" y2="52" stroke="#F0C030" strokeWidth="9" strokeLinecap="round" />
+
+        {/* Extensión derecha ascendente (cola del mu) */}
+        <path
+          d="M 55,52 C 55,36 62,24 74,24 C 80,24 84,28 84,34 L 84,72"
+          stroke="#F0C030"
+          strokeWidth="9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+
+        {/* Serif / punto base izquierdo — signo de memoria */}
+        <circle cx="26" cy="88" r="5.5" fill="#F0C030" />
+
+        {/* Punto derecho — conector de datos (solo en reveal) */}
         {variant === 'reveal' && (
-          <circle cx="74" cy="78" r="4" fill="#AADDFF" className="animate-pulse" />
+          <circle cx="84" cy="88" r="3.5" fill="#AADDFF" className="animate-pulse" />
         )}
       </svg>
     </div>

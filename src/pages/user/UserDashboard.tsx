@@ -58,14 +58,13 @@ export default function UserDashboard() {
       <StreakRow respuestas={respuestas} />
 
       <main className="flex-1 overflow-y-auto">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="sync">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="h-full"
+            transition={{ duration: 0.12 }}
           >
             <Routes>
               <Route index element={<NudosTab />} />

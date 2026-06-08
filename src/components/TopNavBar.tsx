@@ -10,14 +10,14 @@ export default function TopNavBar({ avatarInitial }: TopNavBarProps) {
     >
       <div className="flex items-center gap-2">
         <MnesticsLogo size="sm" variant="reveal" />
-        <span className="font-mono text-xs font-bold tracking-tight text-white lowercase">
+        <span className="font-mono text-base font-bold tracking-tight text-white lowercase">
           mnestics<span className="text-[#AADDFF]">.app</span>
         </span>
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="text-[7.5px] font-bold text-[#5588AA] tracking-widest uppercase bg-[#2D2440]/60 px-2 py-0.5 rounded-full border border-[#5588AA]/20">
-          BUILD 0607-H
+        <span className="text-[9px] font-bold text-[#5588AA] tracking-widest uppercase bg-[#2D2440]/60 px-2 py-0.5 rounded-full border border-[#5588AA]/20">
+          BUILD 0607-I
         </span>
         <div className="h-7 w-7 rounded-lg border border-[#5588AA]/30 bg-[#2D2440] flex items-center justify-center overflow-hidden">
           {avatarInitial ? (

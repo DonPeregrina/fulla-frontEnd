@@ -14,7 +14,9 @@ function isToday(createdAt: string): boolean {
   const today = todayISO()
   const d = new Date(Number(createdAt))
   if (isNaN(d.getTime())) return false
-  return d.toISOString().split('T')[0] === today
+  // Usar fecha LOCAL para respetar timezone del usuario (CST, etc.)
+  const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return local === today
 }
 
 interface NudoConHilos {
