@@ -42,7 +42,7 @@ export default function StreakRow({ respuestas }: StreakRowProps) {
     <div className="flex items-center gap-2 px-4 py-2 bg-[#1A1535] shrink-0 border-b border-[#2D2440]/30">
       <div className="flex items-center gap-1.5 whitespace-nowrap">
         <div className="h-2 w-2 rounded-full bg-[#E8503A] animate-ping" />
-        <span className="font-mono text-[8px] font-bold tracking-[0.16em] text-[#AADDFF] uppercase">
+        <span className="font-mono text-[10px] font-bold tracking-[0.16em] text-[#AADDFF] uppercase">
           STABLE MEMORY: <span className="text-[#E8503A]">{streak}D STREAK</span>
         </span>
       </div>

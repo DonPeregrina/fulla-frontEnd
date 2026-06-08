@@ -1,5 +1,4 @@
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion } from 'motion/react'
 import { BookOpen, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuery } from '@tanstack/react-query'
@@ -58,23 +57,13 @@ export default function UserDashboard() {
       <StreakRow respuestas={respuestas} />
 
       <main className="flex-1 overflow-y-auto">
-        <AnimatePresence mode="sync">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-          >
-            <Routes>
-              <Route index element={<NudosTab />} />
-              <Route path="historial" element={<HistorialTab />} />
-              <Route path="perfil"    element={<PerfilTab />} />
-              <Route path="hilos"     element={<Navigate to="/user" replace />} />
-              <Route path="capturas"  element={<Navigate to="/user" replace />} />
-            </Routes>
-          </motion.div>
-        </AnimatePresence>
+        <Routes>
+          <Route index element={<NudosTab />} />
+          <Route path="historial" element={<HistorialTab />} />
+          <Route path="perfil"    element={<PerfilTab />} />
+          <Route path="hilos"     element={<Navigate to="/user" replace />} />
+          <Route path="capturas"  element={<Navigate to="/user" replace />} />
+        </Routes>
       </main>
 
       <nav className="fixed bottom-0 inset-x-0 z-50 flex w-full items-center justify-around border-t border-[#2D2440] bg-[#1A1535] pb-[env(safe-area-inset-bottom)] pt-2.5 shadow-[0_-4px_12px_rgba(26,21,53,0.3)]">

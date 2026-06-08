@@ -234,6 +234,11 @@ export default function NudosTab() {
   const nudoTotal = activeNudo?.preguntas.length ?? 0
   const momentState = getMomentState(nudoAnswered, nudoTotal)
 
+  // Overall daily progress
+  const answeredQuestionIds = new Set(respuestasHoy.map(r => r.questionId))
+  const totalPreguntas = nudosConHilos.reduce((acc, n) => acc + n.preguntas.length, 0)
+  const totalAnsweredHoy = nudosConHilos.reduce((acc, n) => acc + n.preguntas.filter(p => answeredQuestionIds.has(p.id)).length, 0)
+
   // Primera pregunta sin responder del hilo seleccionado
   const hiloSeleccionado = seleccion ? activeNudo?.hilos.find(h => h.id === seleccion.hilo.id) : null
   const preguntasPendientes = hiloSeleccionado
@@ -267,13 +272,94 @@ export default function NudosTab() {
         else if (info.offset.x > 50) goPrev()
       }}
     >
-      {/* 1) Barra de navegación de tiempo */}
-      <div className="flex items-center gap-2 px-4 pt-1 pb-2 shrink-0">
+      {/* 1) Panel HUD — sticky arriba siempre */}
+      <div className="sticky top-0 z-10 bg-mn-bg px-4 pt-3 pb-2 shrink-0">
+        <div className="bg-white border border-[#DDD5EE] rounded-[24px] overflow-hidden shadow-sm flex flex-col p-4 space-y-3">
+
+          {/* Active Matrix: archivo seleccionado o hint */}
+          <div className="min-h-[44px]">
+            {seleccion && hiloSeleccionado ? (
+              <div>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="font-mono text-[9px] font-bold tracking-[0.1em] uppercase"
+                    style={{ color: hiloSeleccionado.color }}
+                  >
+                    // {hiloCode(hiloSeleccionado.id)} · {hiloSeleccionado.name}
+                  </span>
+                  <span className="font-mono text-[8px] text-mn-sky uppercase font-bold tracking-widest animate-pulse">
+                    Conexión Activa
+                  </span>
+                </div>
+                <div className="font-mono text-[11px] text-mn-plum mt-2 leading-relaxed line-clamp-2">
+                  {firstUnanswered ? (
+                    <span>&gt; {firstUnanswered.body}</span>
+                  ) : (
+                    <span className="text-mn-sky italic">core synched — node sequence active.</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="font-mono text-[9px] font-bold text-mn-sky tracking-[0.1em] uppercase">
+                  // ACTIVE MATRIX STATUS
+                </div>
+                <div className="font-mono text-[10px] text-[#B0A8CC] mt-2 italic">
+                  _ select any node above on the channel lines to integrate state...
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sync Metric — overall del día */}
+          <div className="border-t border-[#EDE9F8] pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-mono text-[9px] font-bold text-mn-sky tracking-[0.1em] uppercase">
+                // SYNC METRIC
+              </span>
+              <span className="font-mono text-[10px] font-bold text-mn-plum tracking-widest">
+                {totalAnsweredHoy}/{totalPreguntas} SECURED
+              </span>
+            </div>
+
+            <div className="relative h-5 bg-[#FAF9FD] border border-[#DDD5EE] rounded-xl overflow-hidden flex items-center p-0.5">
+              <div
+                className="h-full bg-mn-plum rounded-lg transition-all duration-500"
+                style={{ width: totalPreguntas > 0 ? `${Math.round((totalAnsweredHoy / totalPreguntas) * 100)}%` : '0%' }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className={`font-mono text-[9px] font-bold tracking-[0.1em] ${totalAnsweredHoy / Math.max(totalPreguntas, 1) > 0.55 ? 'text-white' : 'text-mn-plum'}`}>
+                  {totalPreguntas > 0 ? Math.round((totalAnsweredHoy / totalPreguntas) * 100) : 0}% COMPLETE
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-1 mt-2">
+              {nudosConHilos.flatMap(nudo =>
+                nudo.preguntas.map(p => {
+                  const answered = answeredQuestionIds.has(p.id)
+                  const hiloColor = nudo.hilos.find(h => h.id === p.groupId)?.color ?? '#F0C030'
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex-1 h-1 rounded-sm transition-all"
+                      style={{ backgroundColor: answered ? hiloColor : '#EDE9F8' }}
+                    />
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2) Barra de navegación de tiempo */}
+      <div className="flex items-center gap-2 px-4 pt-2 pb-1 shrink-0">
         <button onClick={goPrev} disabled={safeIdx === 0} className="p-1 text-mn-plum disabled:opacity-30 hover:text-mn-sky transition-colors">
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="h-[1px] flex-1 bg-[#DDD5EE]" />
-        <span className="font-mono text-[8px] font-bold text-mn-plum tracking-[0.16em] uppercase whitespace-nowrap">
+        <span className="font-mono text-[9px] font-bold text-mn-plum tracking-[0.16em] uppercase whitespace-nowrap">
           // {hiloCode(activeNudo?.id ?? 'x')} · {activeNudo?.name ?? '–'}
         </span>
         <div className="h-[1px] flex-1 bg-[#DDD5EE]" />
@@ -282,7 +368,7 @@ export default function NudosTab() {
         </button>
       </div>
 
-      {/* 2) State matrix — time options con nombres reales */}
+      {/* 3) State matrix — time options con nombres reales */}
       <div className="px-4 mb-2 shrink-0 overflow-x-auto">
         <div className="flex items-center justify-between min-w-0 gap-1">
           {nudosConHilos.map((nudo, i) => {
@@ -321,7 +407,7 @@ export default function NudosTab() {
         </div>
       </div>
 
-      {/* 3) BraidCanvas */}
+      {/* 4) BraidCanvas */}
       {activeNudo && (
         <div className="px-4 pb-2">
           <BraidCanvas
@@ -335,85 +421,6 @@ export default function NudosTab() {
             }}
             momentState={momentState}
           />
-        </div>
-      )}
-
-      {/* 4) Panel HUD — 2 secciones */}
-      {activeNudo && (
-        <div className="mx-4 mt-1 bg-white border border-[#DDD5EE] rounded-[24px] overflow-hidden shadow-sm flex flex-col p-4 space-y-3">
-
-          {/* Sección superior: archivo seleccionado o hint */}
-          <div className="min-h-[48px]">
-            {seleccion && hiloSeleccionado ? (
-              <div>
-                <div className="flex items-center justify-between">
-                  <span
-                    className="font-mono text-[8px] font-bold tracking-[0.1em] uppercase"
-                    style={{ color: hiloSeleccionado.color }}
-                  >
-                    // {hiloCode(hiloSeleccionado.id)} · {hiloSeleccionado.name}
-                  </span>
-                  <span className="font-mono text-[7px] text-mn-sky uppercase font-bold tracking-widest animate-pulse">
-                    Conexión Activa
-                  </span>
-                </div>
-                <div className="font-mono text-[10px] text-mn-plum mt-2 leading-relaxed line-clamp-2">
-                  {firstUnanswered ? (
-                    <span>&gt; {firstUnanswered.body}</span>
-                  ) : (
-                    <span className="text-mn-sky italic">core synched — node sequence active.</span>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="font-mono text-[8px] font-bold text-mn-sky tracking-[0.1em] uppercase">
-                  // ACTIVE MATRIX STATUS
-                </div>
-                <div className="font-mono text-[9px] text-[#B0A8CC] mt-2 italic">
-                  _ select any node above on the channel lines to integrate state...
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sección inferior: progreso */}
-          <div className="border-t border-[#EDE9F8] pt-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-mono text-[8px] font-bold text-mn-sky tracking-[0.1em] uppercase">
-                // SYNC METRIC
-              </span>
-              <span className="font-mono text-[9px] font-bold text-mn-plum tracking-widest">
-                {nudoAnswered}/{nudoTotal} SECURED
-              </span>
-            </div>
-
-            <div className="relative h-5 bg-[#FAF9FD] border border-[#DDD5EE] rounded-xl overflow-hidden flex items-center p-0.5">
-              <div
-                className="h-full bg-mn-plum rounded-lg transition-all duration-500"
-                style={{ width: nudoTotal > 0 ? `${Math.round((nudoAnswered / nudoTotal) * 100)}%` : '0%' }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className={`font-mono text-[8px] font-bold tracking-[0.1em] ${nudoAnswered / Math.max(nudoTotal, 1) > 0.55 ? 'text-white' : 'text-mn-plum'}`}>
-                  {nudoTotal > 0 ? Math.round((nudoAnswered / nudoTotal) * 100) : 0}% COMPLETE
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-1.5 mt-2">
-              {activeNudo.preguntas.map(p => {
-                const answered = !!respuestasHoyMap[p.id]
-                const hiloColor = activeNudo.hilos.find(h => h.id === p.groupId)?.color ?? '#F0C030'
-                return (
-                  <div
-                    key={p.id}
-                    className="flex-1 h-1 rounded-sm transition-all"
-                    style={{ backgroundColor: answered ? hiloColor : '#EDE9F8' }}
-                  />
-                )
-              })}
-            </div>
-          </div>
         </div>
       )}
 
