@@ -46,6 +46,8 @@ export interface Pregunta {
   body: string
   categoryId: string
   groupId: string
+  /** Solo para el host: respuestas que tiene la pregunta en todo el historial. */
+  answerCount?: number | null
 }
 
 // ─── Respuestas (Answers en el schema) ───────────────────────────────────────
@@ -70,6 +72,9 @@ export interface Bitacora {
   userId?: string
   answers: Respuesta[]
 }
+
+/** Bitácora sin respuestas: solo el día y cuántas hubo. */
+export type BitacoraDia = Pick<Bitacora, 'id' | 'date' | 'count' | 'userId'>
 
 // ─── Invitación (Invite en el schema) ────────────────────────────────────────
 

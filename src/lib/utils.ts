@@ -32,3 +32,30 @@ export function dateToISO(date: string | number | Date): string {
 export function todayISO(): string {
   return localISO(new Date())
 }
+
+/** Migra las claves de localStorage del nombre anterior (`fulla:`) a `mnestics:` sin perder sesión ni avatares. */
+export function migrateLegacyStorage(): void {
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith('fulla:')) continue
+      const next = `mnestics:${key.slice('fulla:'.length)}`
+      if (localStorage.getItem(next) === null) localStorage.setItem(next, localStorage.getItem(key)!)
+      localStorage.removeItem(key)
+    }
+  } catch { /* localStorage no disponible */ }
+}
+
+/**
+ * Día de una bitácora (`collections`) como "YYYY-MM-DD".
+ * `date` es la medianoche UTC de ese día (el día ya viene agrupado por el backend), así que se lee en UTC:
+ * convertirlo a hora local lo corría un día atrás.
+ */
+export function diaDeBitacora(date: string | number | Date): string {
+  return toDate(date).toISOString().slice(0, 10)
+}
+
+/** "YYYY-MM-DD" -> Date a medianoche LOCAL (new Date('YYYY-MM-DD') lo interpreta en UTC y lo corre un día atrás). */
+export function parseDiaISO(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}

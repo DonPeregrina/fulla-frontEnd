@@ -6,14 +6,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        fulla: {
-          gold:   '#F0C030',
-          dark:   '#2D2440',
-          muted:  '#B0A8CC',
-          light:  '#EDE9F8',
-          border: '#DDD5EE',
-          green:  '#10b981',
-        },
         // mnestics identity
         mn: {
           plum:     '#1A1535',

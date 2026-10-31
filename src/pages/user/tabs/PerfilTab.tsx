@@ -5,10 +5,10 @@ import type { User } from '@/types'
 import MnesticsLogo from '@/components/MnesticsLogo'
 
 function getStoredAvatar(userId: string): string | null {
-  try { return localStorage.getItem(`fulla:avatar:${userId}`) } catch { return null }
+  try { return localStorage.getItem(`mnestics:avatar:${userId}`) } catch { return null }
 }
 function storeAvatar(userId: string, data: string) {
-  try { localStorage.setItem(`fulla:avatar:${userId}`, data) } catch { /* ignore */ }
+  try { localStorage.setItem(`mnestics:avatar:${userId}`, data) } catch { /* ignore */ }
 }
 
 export default function PerfilTab() {

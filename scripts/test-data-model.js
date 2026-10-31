@@ -3,12 +3,11 @@
 // Muestra exactamente qué datos llegan del backend y qué debería ser cada cosa en la UI
 // Run: node scripts/test-data-model.js
 
+import { HOST, USER } from './creds.js'
+
 const BASE = 'https://delta-habits.azurewebsites.net/graphql'
 
-const CREDS = {
-  host: { email: 'ismael.peregrina@gmail.com', password: 'Verona.52' },
-  user: { identifier: 'MrPilgrim', password: 'Verona.52' },
-}
+const CREDS = { host: HOST, user: USER }
 
 // IDs conocidos de nudos (categories) — obtenidos con host token en test-nudos.js
 const NUDOS_CONOCIDOS = {

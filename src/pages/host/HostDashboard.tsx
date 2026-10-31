@@ -33,7 +33,7 @@ export default function HostDashboard() {
           <Menu size={20} className="text-[#2D2440]" />
         </button>
         <div className="flex-1 flex items-center justify-center gap-2">
-          <img src="/logo_png.png" alt="Fulla" className="w-6 h-6 object-contain" />
+          <img src="/logo_png.png" alt="Mnestics" className="w-6 h-6 object-contain" />
           <span className="text-[11px] font-black tracking-[.2em] text-[#2D2440] uppercase">Host</span>
         </div>
         <div className="w-9" />
@@ -47,7 +47,7 @@ export default function HostDashboard() {
             <div className="flex items-center justify-between p-4 border-b border-[#DDD5EE]">
               <div className="flex items-center gap-2">
                 <img src="/logo_png.png" alt="" className="w-8 h-8 object-contain" />
-                <span className="text-sm font-black tracking-widest text-[#2D2440] uppercase">Fulla</span>
+                <span className="text-sm font-black tracking-widest text-[#2D2440] uppercase">Mnestics</span>
               </div>
               <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#EDE9F8]">
                 <X size={16} className="text-[#B0A8CC]" />

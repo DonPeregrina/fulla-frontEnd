@@ -4,10 +4,10 @@ import { LogOut, Settings, Mail, Shield, Camera } from 'lucide-react'
 import type { Host } from '@/types'
 
 function getStoredAvatar(hostId: string): string | null {
-  try { return localStorage.getItem(`fulla:avatar:${hostId}`) } catch { return null }
+  try { return localStorage.getItem(`mnestics:avatar:${hostId}`) } catch { return null }
 }
 function storeAvatar(hostId: string, data: string) {
-  try { localStorage.setItem(`fulla:avatar:${hostId}`, data) } catch { /* ignore */ }
+  try { localStorage.setItem(`mnestics:avatar:${hostId}`, data) } catch { /* ignore */ }
 }
 
 export default function PerfilTab() {

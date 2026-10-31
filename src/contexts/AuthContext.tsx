@@ -17,7 +17,7 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const SESSION_KEY = 'fulla:session'
+const SESSION_KEY = 'mnestics:session'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({

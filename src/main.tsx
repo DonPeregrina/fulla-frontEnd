@@ -6,6 +6,9 @@ import { Toaster } from 'sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import App from './App'
 import './index.css'
+import { migrateLegacyStorage } from '@/lib/utils'
+
+migrateLegacyStorage()
 
 const queryClient = new QueryClient({
   defaultOptions: {

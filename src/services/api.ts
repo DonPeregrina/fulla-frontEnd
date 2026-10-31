@@ -10,7 +10,7 @@ export const httpClient = axios.create({
 })
 
 httpClient.interceptors.request.use((config) => {
-  const raw = localStorage.getItem('fulla:session')
+  const raw = localStorage.getItem('mnestics:session')
   if (raw) {
     const session = JSON.parse(raw)
     config.headers.Authorization = `Bearer ${session.token}`
@@ -76,16 +76,30 @@ export const hilosApi = {
       }
     `),
 
-  get: (id: string) =>
-    gql<{ group: import('@/types').Hilo }>(`
-      query Group($id: ID!) {
-        group(id: $id) {
-          id name hostId
-          users { id username name }
-          questions { id body categoryId groupId }
+  get: async (id: string): Promise<{ group: import('@/types').Hilo }> => {
+    try {
+      return await gql<{ group: import('@/types').Hilo }>(`
+        query Group($id: ID!) {
+          group(id: $id) {
+            id name hostId
+            users { id username name }
+            questions { id body categoryId groupId answerCount }
+          }
         }
-      }
-    `, { id }),
+      `, { id })
+    } catch (e) {
+      if (!isMissingField(e)) throw e
+      return gql<{ group: import('@/types').Hilo }>(`
+        query Group($id: ID!) {
+          group(id: $id) {
+            id name hostId
+            users { id username name }
+            questions { id body categoryId groupId }
+          }
+        }
+      `, { id })
+    }
+  },
 
   /** Para usuarios: obtener sus hilos por IDs (group(id) funciona con user token) */
   getByIds: async (ids: string[], token?: string) => {
@@ -213,7 +227,7 @@ export function getNudoNombre(categoryId: string): string {
 // ─── Hilos fallback ───────────────────────────────────────────────────────────
 // group(id) es host-only. Mapeamos UUIDs conocidos a nombres.
 // Cuando el backend exponga grupos para user token, usar hilosApi.get(id) en su lugar.
-// Los nombres también se cachean en localStorage('fulla:group-names') cuando el host visita Bitácoras.
+// Los nombres también se cachean en localStorage('mnestics:group-names') cuando el host visita Bitácoras.
 const HILOS_FALLBACK: Record<string, string> = {
   '824cdd33-6e27-4794-993c-f93be385b8ef': 'Nutricion',
   'bbc88234-dba0-4753-9fd3-931a462b00c9': 'Achaques',
@@ -229,7 +243,7 @@ const HILOS_FALLBACK: Record<string, string> = {
 /** Nombre de un hilo: localStorage → fallback hardcodeado → UUID corto */
 export function getHiloNombre(hiloId: string): string {
   try {
-    const cache = localStorage.getItem('fulla:group-names')
+    const cache = localStorage.getItem('mnestics:group-names')
     if (cache) {
       const map: Record<string, string> = JSON.parse(cache)
       if (map[hiloId]) return map[hiloId]
@@ -247,7 +261,6 @@ export const nudosApi = {
     `),
 }
 
-export { nudosApi as dimensionesApi }
 
 // ─── Preguntas / Questions ────────────────────────────────────────────────────
 // Las preguntas vienen anidadas en Group — acá solo mutations
@@ -276,6 +289,10 @@ export const preguntasApi = {
 // ─── Respuestas / Answers ────────────────────────────────────────────────────
 // Answer.body = el valor de la respuesta (siempre string en el backend)
 
+const ANSWER_FIELDS = 'id body userId questionId timezone createdAt question { id body categoryId groupId }'
+const deviceTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
+const isMissingField = (e: unknown) => /Cannot query field|Unknown argument/.test((e as Error)?.message ?? '')
+
 export const respuestasApi = {
   /** Todas las respuestas del usuario (filtrar por fecha localmente — backend incierto) */
   list: (userId?: string, date?: string) =>
@@ -287,6 +304,59 @@ export const respuestasApi = {
         }
       }
     `, { userId, date }),
+
+  /**
+   * Últimos `days` días (incluyendo hoy) en la zona horaria del dispositivo.
+   * Evita bajar todo el historial. Si el backend aún no tiene la consulta, cae a `list` y filtra aquí.
+   */
+  lastDays: async (days = 30): Promise<{ answers: import('@/types').Respuesta[] }> => {
+    try {
+      const d = await gql<{ answersLastDays: { answers: import('@/types').Respuesta[] } }>(`
+        query AnswersLastDays($days: Int, $tz: String!) {
+          answersLastDays(days: $days, timezone: $tz) { answers { ${ANSWER_FIELDS} } }
+        }
+      `, { days, tz: deviceTimezone() })
+      return { answers: d.answersLastDays.answers }
+    } catch (e) {
+      if (!isMissingField(e)) throw e
+      const all = await respuestasApi.list()
+      const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - (days - 1))
+      return { answers: all.answers.filter(r => Number(r.createdAt) >= since.getTime()) }
+    }
+  },
+
+  /** Respuestas de un día (YYYY-MM-DD) en la zona del dispositivo. El host debe indicar el `userId`. */
+  byDay: async (date: string, userId?: string): Promise<{ answers: import('@/types').Respuesta[] }> => {
+    try {
+      const d = await gql<{ answersByDay: { answers: import('@/types').Respuesta[] } }>(`
+        query AnswersByDay($userId: ID, $date: String!, $tz: String!) {
+          answersByDay(userId: $userId, date: $date, timezone: $tz) { answers { ${ANSWER_FIELDS} } }
+        }
+      `, { userId, date, tz: deviceTimezone() })
+      return { answers: d.answersByDay.answers }
+    } catch (e) {
+      if (!isMissingField(e)) throw e
+      return respuestasApi.list(userId, date)   // backend anterior: filtra por día UTC
+    }
+  },
+
+  /** Respuestas del día `from` al día `to` (YYYY-MM-DD, ambos incluidos; máx. 366 días) en la zona del dispositivo. */
+  between: async (from: string, to: string): Promise<{ answers: import('@/types').Respuesta[] }> => {
+    try {
+      const d = await gql<{ answersBetween: { answers: import('@/types').Respuesta[] } }>(`
+        query AnswersBetween($from: String!, $to: String!, $tz: String!) {
+          answersBetween(from: $from, to: $to, timezone: $tz) { answers { ${ANSWER_FIELDS} } }
+        }
+      `, { from, to, tz: deviceTimezone() })
+      return { answers: d.answersBetween.answers }
+    } catch (e) {
+      if (!isMissingField(e)) throw e
+      const all = await respuestasApi.list()
+      const start = new Date(`${from}T00:00:00`).getTime()
+      const end = new Date(`${to}T23:59:59.999`).getTime()
+      return { answers: all.answers.filter(r => Number(r.createdAt) >= start && Number(r.createdAt) <= end) }
+    }
+  },
 
   create: (questionId: string, body: string, timezone?: string) =>
     gql<{ createAnswer: { answer: import('@/types').Respuesta } }>(`
@@ -317,12 +387,54 @@ export const respuestasApi = {
     `, { userId }),
 }
 
-export { respuestasApi as nodosApi }
 
 // ─── Bitácoras / Collections ──────────────────────────────────────────────────
 // Collection ya trae answers anidadas con sus questions
 
 export const bitacorasApi = {
+  /**
+   * Host: una fila por (día, usuario) de los últimos `days` días, SIN las respuestas (se piden al abrir un día
+   * con `respuestasApi.byDay`). Días agrupados en la zona del dispositivo. Con un backend anterior cae a la
+   * lista completa por día UTC.
+   */
+  hostDays: async (days: number): Promise<{ collections: import('@/types').BitacoraDia[] }> => {
+    try {
+      return await gql<{ collections: import('@/types').BitacoraDia[] }>(`
+        query HostCollections($tz: String, $days: Int) {
+          collections(timezone: $tz, days: $days) { id date count userId }
+        }
+      `, { tz: deviceTimezone(), days })
+    } catch (e) {
+      if (!isMissingField(e)) throw e
+      return gql<{ collections: import('@/types').BitacoraDia[] }>(`
+        query HostCollections { collections { id date count userId } }
+      `)
+    }
+  },
+
+  /**
+   * Solo fecha y conteo por día (sin respuestas): barato aun con años de historial.
+   * Los días se agrupan en la zona horaria del dispositivo; `date` es la medianoche UTC de ese día local
+   * (usa `.toISOString().slice(0, 10)` para obtener el `YYYY-MM-DD` local). Con un backend sin soporte de
+   * zona horaria, cae a días UTC.
+   */
+  dates: async (userId?: string): Promise<{ collections: import('@/types').BitacoraDia[] }> => {
+    try {
+      return await gql<{ collections: import('@/types').BitacoraDia[] }>(`
+        query CollectionDates($userId: ID, $tz: String) {
+          collections(userId: $userId, timezone: $tz) { id date count }
+        }
+      `, { userId, tz: deviceTimezone() })
+    } catch (e) {
+      if (!isMissingField(e)) throw e
+      return gql<{ collections: import('@/types').BitacoraDia[] }>(`
+        query CollectionDates($userId: ID) {
+          collections(userId: $userId) { id date count }
+        }
+      `, { userId })
+    }
+  },
+
   list: (userId?: string) =>
     gql<{ collections: import('@/types').Bitacora[] }>(`
       query Collections($userId: ID) {
@@ -354,7 +466,7 @@ export const healthApi = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: 'mutation { loginHost(input: { email: "ping@fulla.health", password: "ping" }) { token } }',
+          query: 'mutation { loginHost(input: { email: "ping@mnestics.app", password: "ping" }) { token } }',
         }),
         signal: controller.signal,
       })
