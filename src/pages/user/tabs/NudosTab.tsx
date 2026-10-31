@@ -190,8 +190,9 @@ export default function NudosTab() {
   const { data: nudosRaw } = useQuery({ queryKey: ['nudos'], queryFn: getNudos, staleTime: Infinity })
 
   const { data: respuestasData, isLoading } = useQuery({
-    queryKey: ['respuestas-all', userId],
-    queryFn: () => respuestasApi.list(userId),
+    // Últimos 30 días: alcanza para las preguntas activas y el progreso de hoy sin bajar todo el historial
+    queryKey: ['respuestas-recent', userId],
+    queryFn: () => respuestasApi.lastDays(30),
     enabled: !!userId,
     staleTime: 1000 * 60 * 10,
   })
@@ -201,7 +202,11 @@ export default function NudosTab() {
       if (respuestaId) { await respuestasApi.update(respuestaId, body); return }
       await respuestasApi.create(questionId, body)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['respuestas-all', userId] }); toast.success('Respuesta guardada') },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['respuestas-recent', userId] })
+      qc.invalidateQueries({ queryKey: ['respuestas-month', userId] })
+      qc.invalidateQueries({ queryKey: ['bitacoras-dates', userId] })
+       toast.success('Respuesta guardada') },
     onError: () => toast.error('No se pudo guardar'),
   })
 

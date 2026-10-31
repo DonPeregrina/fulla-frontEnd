@@ -55,7 +55,7 @@ async function ping() {
 
 async function main() {
   console.log('━'.repeat(60))
-  console.log('  Fulla Backend Monitor')
+  console.log('  Mnestics Backend Monitor')
   console.log(`  URL: ${BASE_URL}/graphql`)
   console.log(`  Intervalo: ${INTERVAL_MS / 1000}s  |  Timeout por ping: ${PING_TIMEOUT_MS / 1000}s`)
   console.log('━'.repeat(60))

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
-import { ArrowLeft, X, Trash2, UserPlus, UserMinus, Plus, Pencil } from 'lucide-react'
+import { ArrowLeft, X, Trash2, UserPlus, UserMinus, Plus, Pencil, ArrowRightLeft } from 'lucide-react'
 import { hilosApi, preguntasApi, invitacionesApi, usersApi, getNudoNombre, NUDOS_HARDCODED } from '@/services/api'
 import { nudoColor } from '@/types'
 import type { Pregunta } from '@/types'
@@ -32,6 +32,15 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
   const [body, setBody] = useState('')
   const [categoryId, setCategoryId] = useState(NUDOS_HARDCODED[0].id)
   const [eliminando, setEliminando] = useState<string | null>(null)
+  const [moviendo, setMoviendo] = useState<Pregunta | null>(null)
+  const [destinoId, setDestinoId] = useState('')
+
+  const { data: hilosData } = useQuery({ queryKey: ['hilos'], queryFn: () => hilosApi.list() })
+  const otrosHilos = (hilosData?.groups ?? []).filter(h => h.id !== hiloId)
+
+  function abrirMover(p: Pregunta) {
+    setMoviendo(p); setDestinoId('')
+  }
 
   function abrirCrear() {
     setEditandoP(null); setBody(''); setCategoryId(NUDOS_HARDCODED[0].id); setOpen(true)
@@ -55,6 +64,18 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
     mutationFn: () => preguntasApi.update(editandoP!.id, body.trim(), editandoP!.groupId, categoryId),
     onSuccess: () => { invalidate(); toast.success('Pregunta actualizada'); setOpen(false) },
     onError: () => toast.error('No se pudo actualizar'),
+  })
+
+  const moveMutation = useMutation({
+    mutationFn: () => preguntasApi.update(moviendo!.id, moviendo!.body, destinoId, moviendo!.categoryId),
+    onSuccess: () => {
+      const nombre = otrosHilos.find(h => h.id === destinoId)?.name ?? 'el hilo nuevo'
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['hilo', destinoId] })
+      toast.success(`Pregunta movida a ${nombre}`)
+      setMoviendo(null)
+    },
+    onError: () => toast.error('No se pudo mover la pregunta'),
   })
 
   const deleteMutation = useMutation({
@@ -94,6 +115,9 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
               <div className="flex items-start justify-between gap-3">
                 <p className="text-xs font-bold text-[#2D2440] leading-snug flex-1">{p.body}</p>
                 <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => abrirMover(p)} title="Cambiar de hilo" aria-label="Cambiar de hilo" className="text-[#B0A8CC] hover:text-[#2D2440] transition-colors">
+                    <ArrowRightLeft size={13} />
+                  </button>
                   <button onClick={() => abrirEditar(p)} className="text-[#B0A8CC] hover:text-[#2D2440] transition-colors">
                     <Pencil size={13} />
                   </button>
@@ -102,6 +126,11 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
                   </button>
                 </div>
               </div>
+              {p.answerCount != null && (
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[#8878AA]">
+                  {p.answerCount} respuesta{p.answerCount !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           )
         })
@@ -162,6 +191,49 @@ function TabPreguntas({ hiloId, preguntas }: { hiloId: string; preguntas: Pregun
             >
               {isSaving ? 'Guardando…' : editandoP ? 'Guardar cambios' : 'Agregar pregunta'}
             </button>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Dialog: Cambiar pregunta de hilo */}
+      <Dialog.Root open={!!moviendo} onOpenChange={o => !o && setMoviendo(null)}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+          <Dialog.Content className="fixed inset-x-4 top-[18%] z-50 rounded-[28px] border-2 border-[#2D2440]/20 bg-[#EDE9F8] p-6 max-w-sm mx-auto focus:outline-none">
+            <Dialog.Title className="text-[11px] font-black uppercase tracking-[.2em] text-[#2D2440] mb-3">
+              Cambiar de hilo
+            </Dialog.Title>
+            <p className="text-xs font-bold text-[#2D2440] leading-snug mb-3">{moviendo?.body}</p>
+            <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8878AA] mb-1.5" htmlFor="hilo-destino">
+              Mover a
+            </label>
+            <select
+              id="hilo-destino"
+              value={destinoId}
+              onChange={e => setDestinoId(e.target.value)}
+              className="w-full rounded-2xl border-2 border-[#DDD5EE] bg-white px-3 py-3 text-xs font-bold text-[#2D2440] mb-3"
+            >
+              <option value="">Elige un hilo…</option>
+              {otrosHilos.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+            </select>
+            <p className="text-[11px] text-[#5A4A7A] mb-5">
+              {moviendo?.answerCount
+                ? `Sus ${moviendo.answerCount} respuestas se van con la pregunta y pasarán a verse en el hilo nuevo. `
+                : 'Esta pregunta aún no tiene respuestas. '}
+              Los usuarios del hilo nuevo la verán como pendiente hasta que la contesten.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setMoviendo(null)} className="flex-1 py-3 rounded-2xl border-2 border-[#DDD5EE] text-[10px] font-bold uppercase tracking-widest text-[#5A4A7A]">
+                Cancelar
+              </button>
+              <button
+                onClick={() => moveMutation.mutate()}
+                disabled={!destinoId || moveMutation.isPending}
+                className="flex-1 py-3 rounded-2xl bg-[#2D2440] text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
+              >
+                {moveMutation.isPending ? 'Moviendo…' : 'Mover'}
+              </button>
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

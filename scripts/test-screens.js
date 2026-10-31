@@ -2,6 +2,7 @@
 // test-screens.js — verifica que cada pantalla tiene datos para renderizar
 // Run: node scripts/test-screens.js
 
+import { HOST, USER } from './creds.js'
 const BASE = 'https://delta-habits.azurewebsites.net/graphql'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -38,18 +39,18 @@ async function login(email, password, role) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('\n🖥️   FULLA SCREEN DATA DIAGNOSTICS\n')
+  console.log('\n🖥️   MNESTICS SCREEN DATA DIAGNOSTICS\n')
 
   // ── Login ambos roles ──────────────────────────────────────────────────────
   let hostToken, userToken, userId
 
   try {
-    hostToken = await login('ismael.peregrina@gmail.com', 'Verona.52', 'HOST')
+    hostToken = await login(HOST.email, HOST.password, 'HOST')
     ok('HOST login', 'token ✓')
   } catch (e) { fail('HOST login', e.message); return }
 
   try {
-    userToken = await login('MrPilgrim', 'Verona.52', 'USER')
+    userToken = await login(USER.identifier, USER.password, 'USER')
     ok('USER login (MrPilgrim)', 'token ✓')
   } catch (e) { fail('USER login', e.message) }
 

@@ -1,41 +1,15 @@
-import type { Respuesta } from '@/types'
+import { calcStreak } from '@/lib/streak'
+import { todayISO } from '@/lib/utils'
 
 interface StreakRowProps {
-  respuestas: Respuesta[]
-}
-
-function calcStreak(respuestas: Respuesta[]): number {
-  if (!respuestas.length) return 0
-
-  // Obtener fechas únicas con respuestas (formato YYYY-MM-DD)
-  const dates = new Set(
-    respuestas.map(r => {
-      const d = new Date(Number(r.createdAt))
-      return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0]
-    }).filter(Boolean)
-  )
-
-  let streak = 0
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  for (let i = 0; i < 365; i++) {
-    const d = new Date(today)
-    d.setDate(today.getDate() - i)
-    const iso = d.toISOString().split('T')[0]
-    if (dates.has(iso)) {
-      streak++
-    } else {
-      break
-    }
-  }
-  return streak
+  /** Días con al menos una respuesta, fechas locales YYYY-MM-DD */
+  dates: string[]
 }
 
 const THREAD_COLORS = ['#F0C030', '#AADDFF', '#5588AA', '#E8503A', '#F0C030', '#AADDFF', '#E8503A']
 
-export default function StreakRow({ respuestas }: StreakRowProps) {
-  const streak = calcStreak(respuestas)
+export default function StreakRow({ dates }: StreakRowProps) {
+  const streak = calcStreak(dates, todayISO())
   const totalDots = 7
 
   return (

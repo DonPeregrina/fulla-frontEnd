@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { bitacorasApi, usersApi, hilosApi } from '@/services/api'
-import { nudoColor, type Bitacora, type Respuesta } from '@/types'
-import { formatDate, dateToISO } from '@/lib/utils'
+import { bitacorasApi, respuestasApi, usersApi, hilosApi } from '@/services/api'
+import { nudoColor, type BitacoraDia, type Respuesta } from '@/types'
+import { formatDate, diaDeBitacora, parseDiaISO } from '@/lib/utils'
 
 function Skeleton() {
   return (
@@ -32,8 +32,16 @@ function RespuestaRow({ r }: { r: Respuesta }) {
   )
 }
 
-function BitacoraCard({ bitacora, userName }: { bitacora: Bitacora; userName: string }) {
+function BitacoraCard({ bitacora, fecha, userName }: { bitacora: BitacoraDia; fecha: string; userName: string }) {
   const [open, setOpen] = useState(false)
+  // Las respuestas se piden solo al abrir la tarjeta (antes se bajaba todo el historial de golpe)
+  const { data, isLoading } = useQuery({
+    queryKey: ['respuestas-dia', bitacora.userId, fecha],
+    queryFn: () => respuestasApi.byDay(fecha, bitacora.userId),
+    enabled: open && !!bitacora.userId,
+    staleTime: 1000 * 60 * 5,
+  })
+  const respuestas = data?.answers ?? []
   return (
     <div className="bg-white rounded-2xl border border-[#DDD5EE] overflow-hidden">
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
@@ -48,9 +56,11 @@ function BitacoraCard({ bitacora, userName }: { bitacora: Bitacora; userName: st
           : <ChevronRight size={16} className="text-[#B0A8CC] shrink-0" />
         }
       </button>
-      {open && bitacora.answers.length > 0 && (
+      {open && (
         <div className="px-4 pb-3 border-t border-[#DDD5EE]/60">
-          {bitacora.answers.map(r => <RespuestaRow key={r.id} r={r} />)}
+          {isLoading
+            ? <p className="py-3 text-[10px] text-[#B0A8CC] animate-pulse">Cargando respuestas…</p>
+            : respuestas.map(r => <RespuestaRow key={r.id} r={r} />)}
         </div>
       )}
     </div>
@@ -59,7 +69,7 @@ function BitacoraCard({ bitacora, userName }: { bitacora: Bitacora; userName: st
 
 function FechaGroup({ fecha, bitacoras, userMap }: {
   fecha: string
-  bitacoras: Bitacora[]
+  bitacoras: BitacoraDia[]
   userMap: Record<string, string>
 }) {
   const [open, setOpen] = useState(false)
@@ -69,7 +79,7 @@ function FechaGroup({ fecha, bitacoras, userMap }: {
       <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-1 py-1">
         <div className="text-left">
           <p className="text-sm font-black text-[#2D2440] tracking-tight capitalize">
-            {formatDate(fecha, "EEEE d 'de' MMMM")}
+            {formatDate(parseDiaISO(fecha), "EEEE d 'de' MMMM")}
           </p>
           <p className="text-[9px] text-[#B0A8CC] uppercase tracking-widest font-bold">
             {bitacoras.length} usuario{bitacoras.length !== 1 ? 's' : ''} · {totalR} respuestas
@@ -89,7 +99,7 @@ function FechaGroup({ fecha, bitacoras, userMap }: {
       {open && (
         <div className="space-y-2 pl-1">
           {bitacoras.map(b => (
-            <BitacoraCard key={b.id} bitacora={b} userName={userMap[b.userId ?? ''] ?? 'Usuario'} />
+            <BitacoraCard key={b.id} bitacora={b} fecha={fecha} userName={userMap[b.userId ?? ''] ?? 'Usuario'} />
           ))}
         </div>
       )}
@@ -100,10 +110,14 @@ function FechaGroup({ fecha, bitacoras, userMap }: {
 export default function BitacorasTab() {
   const { current } = useAuth()
 
-  const { data: bitacorasData, isLoading } = useQuery({
-    queryKey: ['bitacoras'],
-    queryFn: () => bitacorasApi.list(),
+  // Últimos 30 días; "Ver más" amplía la ventana de 90 en 90 días
+  const [dias, setDias] = useState(30)
+  const [conteoAntes, setConteoAntes] = useState<number | null>(null)
+  const { data: bitacorasData, isLoading, isFetching } = useQuery({
+    queryKey: ['bitacoras-host', dias],
+    queryFn: () => bitacorasApi.hostDays(dias),
     enabled: !!current?.id,
+    placeholderData: keepPreviousData,
   })
 
   const { data: usersData } = useQuery({
@@ -118,7 +132,7 @@ export default function BitacorasTab() {
       const d = await hilosApi.list()
       const map: Record<string, string> = {}
       d.groups.forEach(g => { map[g.id] = g.name })
-      localStorage.setItem('fulla:group-names', JSON.stringify(map))
+      localStorage.setItem('mnestics:group-names', JSON.stringify(map))
       return d
     },
     enabled: !!current?.id,
@@ -129,8 +143,8 @@ export default function BitacorasTab() {
   )
 
   const bitacoras = bitacorasData?.collections ?? []
-  const byFecha = bitacoras.reduce<Record<string, Bitacora[]>>((acc, b) => {
-    const d = dateToISO(b.date)
+  const byFecha = bitacoras.reduce<Record<string, BitacoraDia[]>>((acc, b) => {
+    const d = diaDeBitacora(b.date)
     if (!acc[d]) acc[d] = []
     acc[d].push(b)
     return acc
@@ -156,6 +170,17 @@ export default function BitacorasTab() {
           {fechas.map(f => (
             <FechaGroup key={f} fecha={f} bitacoras={byFecha[f]} userMap={userMap} />
           ))}
+          {dias > 30 && !isFetching && conteoAntes === bitacoras.length ? (
+            <p className="py-3 text-center text-[10px] uppercase tracking-widest text-[#B0A8CC]">No hay más registros</p>
+          ) : dias < 3650 && (
+            <button
+              onClick={() => { setConteoAntes(bitacoras.length); setDias(d => Math.min(d + 90, 3650)) }}
+              disabled={isFetching}
+              className="w-full rounded-2xl border-2 border-dashed border-[#DDD5EE] py-3 text-[10px] font-bold uppercase tracking-widest text-[#8878AA] hover:border-[#F0C030] disabled:opacity-50"
+            >
+              {isFetching ? 'Cargando…' : 'Ver 90 días más'}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -8,9 +8,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.svg', 'icons/*.png'],
+      includeAssets: ['icons/icon-192.png', 'icons/favicon-32.png', 'apple-touch-icon.png', 'favicon.ico'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Los íconos grandes solo se piden al instalar la app; no hace falta guardarlos para uso sin conexión
+        globIgnores: ['icons/icon-512.png', 'icons/icon-maskable-512.png'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/delta-habits\.azurewebsites\.net\/graphql/,
@@ -23,17 +25,18 @@ export default defineConfig({
         ],
       },
       manifest: {
-        name: 'Fulla',
-        short_name: 'Fulla',
+        name: 'Mnestics',
+        short_name: 'Mnestics',
         description: 'Hilos de hábitos. Nodos de hallazgos.',
-        theme_color: '#2D2440',
-        background_color: '#2D2440',
+        theme_color: '#1A1535',
+        background_color: '#05012A', // azul oscuro del ícono, para que la pantalla de arranque no desentone
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

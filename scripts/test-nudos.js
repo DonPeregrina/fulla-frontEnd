@@ -2,12 +2,11 @@
 // test-nudos.js — Valida los datos que necesita NudosTab
 // Run: node scripts/test-nudos.js
 
+import { HOST, USER } from './creds.js'
+
 const BASE = 'https://delta-habits.azurewebsites.net/graphql'
 
-const CREDS = {
-  host: { email: 'ismael.peregrina@gmail.com', password: 'Verona.52' },
-  user: { identifier: 'MrPilgrim', password: 'Verona.52' },
-}
+const CREDS = { host: HOST, user: USER }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -12,10 +12,10 @@ import {
   format, addMonths, subMonths, isSameDay
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { usersApi, hilosApi, bitacorasApi, getNudoNombre } from '@/services/api'
+import { usersApi, hilosApi, bitacorasApi, respuestasApi, getNudoNombre } from '@/services/api'
 import { nudoColor } from '@/types'
-import { dateToISO, formatDate } from '@/lib/utils'
-import type { Bitacora } from '@/types'
+import { diaDeBitacora, formatDate } from '@/lib/utils'
+import type { BitacoraDia } from '@/types'
 
 // ─── Calendario de bitácoras ──────────────────────────────────────────────────
 
@@ -24,19 +24,25 @@ function CalendarioBitacoras({
   bitacoras,
 }: {
   userId: string
-  bitacoras: Bitacora[]
+  bitacoras: BitacoraDia[]
 }) {
   const [mes, setMes] = useState(new Date())
   const [diaSeleccionado, setDiaSeleccionado] = useState<Date | null>(null)
 
-  const diasConReg = new Set(bitacoras.map(b => dateToISO(b.date)))
+  const diasConReg = new Set(bitacoras.map(b => diaDeBitacora(b.date)))
 
   const dias = eachDayOfInterval({ start: startOfMonth(mes), end: endOfMonth(mes) })
   const primerDia = dias[0].getDay() // 0=Dom
 
-  const bitacoraDelDia = diaSeleccionado
-    ? bitacoras.find(b => dateToISO(b.date) === format(diaSeleccionado, 'yyyy-MM-dd'))
-    : null
+  // Las respuestas del día se piden solo al seleccionarlo
+  const diaISO = diaSeleccionado ? format(diaSeleccionado, 'yyyy-MM-dd') : null
+  const { data: delDia, isLoading: cargandoDia } = useQuery({
+    queryKey: ['respuestas-dia', userId, diaISO],
+    queryFn: () => respuestasApi.byDay(diaISO!, userId),
+    enabled: !!diaISO && diasConReg.has(diaISO),
+    staleTime: 1000 * 60 * 5,
+  })
+  const bitacoraDelDia = diaSeleccionado && delDia ? { answers: delDia.answers } : null
 
   return (
     <div className="space-y-3">
@@ -90,6 +96,9 @@ function CalendarioBitacoras({
       </div>
 
       {/* Respuestas del día seleccionado */}
+      {diaSeleccionado && cargandoDia && (
+        <p className="pt-3 text-[10px] text-[#B0A8CC] animate-pulse">Cargando respuestas…</p>
+      )}
       {bitacoraDelDia && (
         <div className="mt-2 space-y-2 border-t border-[#DDD5EE] pt-3">
           <p className="text-[9px] font-bold uppercase tracking-widest text-[#B0A8CC]">
@@ -138,7 +147,7 @@ export default function UsuarioDetail() {
 
   const { data: bitacorasData } = useQuery({
     queryKey: ['bitacoras-user', id],
-    queryFn: () => bitacorasApi.list(id),
+    queryFn: () => bitacorasApi.dates(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
   })

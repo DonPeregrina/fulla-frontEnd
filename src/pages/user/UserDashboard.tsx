@@ -2,7 +2,7 @@ import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { BookOpen, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuery } from '@tanstack/react-query'
-import { respuestasApi } from '@/services/api'
+import { bitacorasApi } from '@/services/api'
 import NudosTab from './tabs/NudosTab'
 import HistorialTab from './tabs/HistorialTab'
 import PerfilTab from './tabs/PerfilTab'
@@ -38,14 +38,17 @@ export default function UserDashboard() {
   const { current } = useAuth()
   const userId = current?.id
 
-  // Reusar mismo cache que NudosTab para streak
-  const { data: respuestasData } = useQuery({
-    queryKey: ['respuestas-all', userId],
-    queryFn: () => respuestasApi.list(userId),
+  // Solo los días con respuestas (sin bajar las respuestas): alcanza para la racha
+  const { data: bitacoras } = useQuery({
+    queryKey: ['bitacoras-dates', userId],
+    queryFn: () => bitacorasApi.dates(userId),
     enabled: !!userId,
     staleTime: 1000 * 60 * 10,
   })
-  const respuestas = respuestasData?.answers ?? []
+  const diasConRespuestas = (bitacoras?.collections ?? [])
+    .map(c => new Date(Number(c.date)))
+    .filter(d => !isNaN(d.getTime()))
+    .map(d => d.toISOString().split('T')[0])
 
   const avatarInitial = current && 'username' in current
     ? (current.username as string).charAt(0).toUpperCase()
@@ -54,7 +57,7 @@ export default function UserDashboard() {
   return (
     <div className="flex flex-col min-h-dvh bg-mn-bg">
       <TopNavBar avatarInitial={avatarInitial} />
-      <StreakRow respuestas={respuestas} />
+      <StreakRow dates={diasConRespuestas} />
 
       <main className="flex-1 overflow-y-auto">
         <Routes>

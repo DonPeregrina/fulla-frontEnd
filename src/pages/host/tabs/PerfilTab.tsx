@@ -1,13 +1,15 @@
 import { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { LogOut, Settings, Mail, Shield, Camera } from 'lucide-react'
+import AccountSwitcher from '@/components/AccountSwitcher'
+import MnesticsLogo from '@/components/MnesticsLogo'
 import type { Host } from '@/types'
 
 function getStoredAvatar(hostId: string): string | null {
-  try { return localStorage.getItem(`fulla:avatar:${hostId}`) } catch { return null }
+  try { return localStorage.getItem(`mnestics:avatar:${hostId}`) } catch { return null }
 }
 function storeAvatar(hostId: string, data: string) {
-  try { localStorage.setItem(`fulla:avatar:${hostId}`, data) } catch { /* ignore */ }
+  try { localStorage.setItem(`mnestics:avatar:${hostId}`, data) } catch { /* ignore */ }
 }
 
 export default function PerfilTab() {
@@ -41,7 +43,7 @@ export default function PerfilTab() {
       {/* Banner */}
       <div className="relative">
         <div className="h-28 bg-[#2D2440] flex items-center justify-center">
-          <img src="/logo_png.png" alt="" className="h-10 opacity-20 object-contain" />
+          <MnesticsLogo size="md" variant="minimal" className="opacity-30" />
         </div>
 
         {/* Avatar */}
@@ -102,6 +104,7 @@ export default function PerfilTab() {
             <Settings size={16} className="text-[#B0A8CC]" />
             Configuración
           </button>
+          <AccountSwitcher />
           <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3.5 text-left text-[10px] font-bold uppercase tracking-widest text-[#E8503A]">
             <LogOut size={16} />
             Cerrar sesión

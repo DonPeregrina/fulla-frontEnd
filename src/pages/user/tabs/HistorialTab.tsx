@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   isSameDay, addMonths, subMonths,
@@ -7,7 +7,7 @@ import {
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, History } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { respuestasApi, getNudoNombre } from '@/services/api'
+import { respuestasApi, bitacorasApi, getNudoNombre } from '@/services/api'
 import { nudoColor, type Respuesta } from '@/types'
 import { dateToISO } from '@/lib/utils'
 
@@ -29,13 +29,44 @@ export default function HistorialTab() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
-  // Reusar mismo cache que NudosTab
+  // Solo las respuestas del mes que se está viendo (en vez de todo el historial)
+  const monthKey = format(currentMonth, 'yyyy-MM')
   const { data, isLoading } = useQuery({
-    queryKey: ['respuestas-all', userId],
-    queryFn: () => respuestasApi.list(userId),
+    queryKey: ['respuestas-month', userId, monthKey],
+    queryFn: () => respuestasApi.between(
+      format(startOfMonth(currentMonth), 'yyyy-MM-dd'),
+      format(endOfMonth(currentMonth), 'yyyy-MM-dd'),
+    ),
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 10,
+    placeholderData: keepPreviousData,
+  })
+
+  // Total histórico: se suma de los conteos por día (misma consulta barata que usa la racha)
+  const { data: bitacoras } = useQuery({
+    queryKey: ['bitacoras-dates', userId],
+    queryFn: () => bitacorasApi.dates(userId),
     enabled: !!userId,
     staleTime: 1000 * 60 * 10,
   })
+  const totalRegistros = (bitacoras?.collections ?? []).reduce((acc, c) => acc + c.count, 0)
+
+  // Navegación acotada: del mes del primer registro al mes actual (sin meses vacíos hacia atrás ni hacia el futuro)
+  const diasConRegistro = (bitacoras?.collections ?? [])
+    .map(c => new Date(Number(c.date)).toISOString().slice(0, 10))
+    .sort()
+  const mesMax = startOfMonth(new Date())
+  const mesMin = diasConRegistro.length ? startOfMonth(new Date(`${diasConRegistro[0]}T00:00:00`)) : mesMax
+  const anios: number[] = []
+  for (let y = mesMax.getFullYear(); y >= mesMin.getFullYear(); y--) anios.push(y)
+  const puedeAnterior = startOfMonth(currentMonth) > mesMin
+  const puedeSiguiente = startOfMonth(currentMonth) < mesMax
+  function irAAnio(anio: number) {
+    let destino = new Date(anio, currentMonth.getMonth(), 1)
+    if (destino < mesMin) destino = mesMin
+    if (destino > mesMax) destino = mesMax
+    setCurrentMonth(destino)
+  }
 
   const todasRespuestas: Respuesta[] = (data?.answers ?? []).filter(r => r.question)
 
@@ -63,7 +94,7 @@ export default function HistorialTab() {
       <div className="border-b border-[#DDD5EE]/50 pb-3">
         <h1 className="text-sm font-bold tracking-[0.2em] text-mn-plum">ARCHIVE RECORD</h1>
         <p className="text-[8px] uppercase tracking-[0.25em] text-mn-sky mt-1">
-          {todasRespuestas.length} registros · past log matrix
+          {totalRegistros} registros · past log matrix
         </p>
       </div>
 
@@ -71,19 +102,35 @@ export default function HistorialTab() {
       <div className="rounded-3xl border-2 border-mn-plum bg-white shadow-sm overflow-hidden">
         {/* Header del mes */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#1A1535]/5 border-b border-[#DDD5EE]/50">
-          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-mn-plum">
-            {format(currentMonth, 'MMMM yyyy', { locale: es })}
+          <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-mn-plum">
+            {format(currentMonth, 'MMMM', { locale: es })}
+            {anios.length > 1 ? (
+              <select
+                value={currentMonth.getFullYear()}
+                onChange={e => irAAnio(Number(e.target.value))}
+                aria-label="Año"
+                className="rounded-lg border border-[#DDD5EE] bg-white px-1.5 py-0.5 text-[10px] font-bold tracking-[0.1em] text-mn-plum"
+              >
+                {anios.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            ) : (
+              <span>{format(currentMonth, 'yyyy')}</span>
+            )}
           </span>
           <div className="flex gap-1">
             <button
               onClick={() => setCurrentMonth(m => subMonths(m, 1))}
-              className="h-7 w-7 border border-[#DDD5EE] bg-white text-mn-plum hover:bg-mn-bg rounded-lg flex items-center justify-center transition-colors"
+              disabled={!puedeAnterior}
+              aria-label="Mes anterior"
+              className="h-7 w-7 border border-[#DDD5EE] bg-white text-mn-plum hover:bg-mn-bg rounded-lg flex items-center justify-center transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={() => setCurrentMonth(m => addMonths(m, 1))}
-              className="h-7 w-7 border border-[#DDD5EE] bg-white text-mn-plum hover:bg-mn-bg rounded-lg flex items-center justify-center transition-colors"
+              disabled={!puedeSiguiente}
+              aria-label="Mes siguiente"
+              className="h-7 w-7 border border-[#DDD5EE] bg-white text-mn-plum hover:bg-mn-bg rounded-lg flex items-center justify-center transition-colors disabled:opacity-30 disabled:pointer-events-none"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

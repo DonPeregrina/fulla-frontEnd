@@ -1,8 +1,8 @@
-# Mnestics (Fulla)
+# Mnestics
 
 PWA para registrar hábitos y respuestas diarias. El host (coach/terapeuta) crea **Hilos** con preguntas, invita **usuarios** y revisa sus **Bitácoras**; el usuario responde preguntas organizadas por **Nudo** (momento del día) y las ve en una trenza animada.
 
-- **Marca:** Mnestics — `mnestics.app` (el repo, el paquete y la clave de sesión todavía dicen `fulla`).
+- **Marca:** Mnestics — `mnestics.app`. El paquete, el manifest y las claves de `localStorage` ya son `mnestics`; al arrancar, la app migra las claves del nombre anterior para no perder sesiones ni avatares (`migrateLegacyStorage` en `src/lib/utils.ts`; se puede quitar cuando todos los usuarios hayan abierto la app una vez). La carpeta del repo local y el repo de GitHub conservan el nombre anterior.
 - **Sitio:** https://purple-pebble-004ec2710.7.azurestaticapps.net
 - **Backend:** `https://delta-habits.azurewebsites.net/graphql` — repo aparte: [Delta-Habits/backend](https://github.com/Delta-Habits/backend) (ver sección *Backend*)
 - **Última verificación de este README:** 2026-10-09
@@ -67,12 +67,12 @@ Scripts en `scripts/` (Node 18+, pegan al backend **real**):
 
 | Script | Para qué |
 |---|---|
-| `node scripts/test-api.js` | Prueba de endpoints (auth + datos) |
+| `node scripts/test-api.js` | Prueba de endpoints (auth + datos). Requiere `.env.test` |
 | `node scripts/test-data-model.js` | Valida el modelo de datos |
 | `node scripts/test-nudos.js` | Prueba de Nudos |
 | `node scripts/test-screens.js` | Diagnóstico de datos por pantalla |
 | `node scripts/ping-backend.js` | Monitorea el arranque del backend (cold start) |
-| `node scripts/generate-icons.js` | Genera iconos PWA desde `images/logo.jpg` (requiere `sharp`) |
+| `node scripts/generate-icons.js` | Genera los íconos de la PWA con la μ (192, 512, maskable 512, apple-touch 180, favicon 32 y `favicon.ico`) desde `images/NewMnestics/mnestics_usuario_1024.png` (versión oscura). Requiere `npm i --no-save sharp` |
 
 ## Credenciales de prueba
 
@@ -85,7 +85,7 @@ Scripts en `scripts/` (Node 18+, pegan al backend **real**):
 | User | azul0078 | Mordecay.52 |
 | User | MarceMIT | Thinking.24 |
 
-`calavera.many / Verona.52` ya no funciona (password incorrecta). Estas mismas credenciales están hardcodeadas en `scripts/test-*.js`.
+`calavera.many / Verona.52` ya no funciona (password incorrecta). Los scripts de `scripts/` ya **no** llevan las credenciales: las leen de `.env.test` (ignorado por git; copiar `.env.test.example` y llenarlo con la tabla de arriba) o de variables de entorno `MN_HOST_EMAIL`, `MN_HOST_PASSWORD`, `MN_USER_ID`, `MN_USER_PASSWORD`, `MN_EXTRA_USERS`.
 
 ---
 
@@ -157,7 +157,7 @@ Barra inferior con 3 tabs:
 src/
 ├── App.tsx                 rutas + ProtectedRoute
 ├── components/             BraidCanvas, MnesticsLogo, Shell, StreakRow, TopNavBar
-├── contexts/AuthContext    login host/user, sesión en localStorage ('fulla:session')
+├── contexts/AuthContext    login host/user, sesión en localStorage ('mnestics:session')
 ├── lib/utils.ts            cn, formatDate, toDate, dateToISO
 ├── pages/
 │   ├── SignIn.tsx          host (email) vs user (username)
@@ -170,19 +170,12 @@ src/
 
 ---
 
-## Código huérfano (no desplegado)
+## Limpieza realizada (2026-10-16)
 
-Archivos que existen pero nadie importa, por lo que **no entran al bundle** de producción. Quedaron del diseño anterior:
-
-| Archivo | Motivo |
-|---|---|
-| `src/pages/user/tabs/CapturasTab.tsx` | Reemplazado por `NudosTab`; la ruta redirige |
-| `src/pages/user/tabs/HilosTab.tsx` (usuario) | Ruta redirige; no confundir con `host/tabs/HilosTab.tsx`, que sí se usa |
-| `src/pages/user/tabs/HoyTab.tsx` | Sin import en `UserDashboard` |
-
-Dependencias en `package.json` sin ningún import en `src/`: `browser-image-compression`, `vaul`, `next-themes`, `@tanstack/react-query-devtools`, `workbox-window`.
-
-Eliminado el 2026-10-09: `Redesign/mnestics/` (prototipo exportado de Google AI Studio con datos mock), `PROGRESS.md`, `ProjectStatus.md` y `DEPLOYMENT_AZURE.md` (esta última era una guía copiada de otro proyecto, MedPacX).
+- Eliminado el código huérfano: `CapturasTab.tsx`, `HilosTab.tsx` (usuario) y `HoyTab.tsx`, más la paleta de Tailwind anterior y los alias `nodosApi` / `dimensionesApi`.
+- Eliminadas dependencias sin uso: `browser-image-compression`, `vaul`, `next-themes`, `@tanstack/react-query-devtools`, `workbox-window`.
+- `npm audit fix`: **0 vulnerabilidades en dependencias de producción**. Quedan 7 en la cadena de build de Tailwind 3 (`braces`, `micromatch`, `postcss-selector-parser`…); solo afectan al desarrollo y arreglarlas exige migrar a Tailwind 4 (cambio mayor).
+- Eliminados el 2026-10-09: `Redesign/mnestics/` (prototipo de Google AI Studio), `PROGRESS.md`, `ProjectStatus.md` y `DEPLOYMENT_AZURE.md` (guía de otro proyecto).
 
 ---
 
@@ -217,11 +210,19 @@ Eliminado el 2026-10-09: `Redesign/mnestics/` (prototipo exportado de Google AI 
 - [ ] Eliminar usuario (`usersApi.delete` no existe) y editar nombre del host (verificar `updateHost`)
 
 **Front**
-- [ ] Decidir si la vista de bitácora por usuario+fecha del host (`/host/bitacoras/:fecha?userId=`) sigue en el alcance
-- [ ] Borrar el código huérfano y las dependencias sin uso
-- [ ] Renombrar `fulla` → `mnestics` (paquete, `fulla:session`, manifest) cuando se decida
+- [ ] Ruta propia de bitácora por usuario+fecha del host (`/host/bitacoras/:fecha?userId=`); hoy el detalle de usuario ya muestra el calendario y las respuestas por día
+- [x] Host: bitácora con los días correctos (se mostraban dos días atrás), con todos los usuarios de cada día (antes solo el primero), últimos 30 días + "Ver 90 días más" y respuestas al abrir cada usuario/día. El calendario del detalle de usuario marcaba un día de menos
+- [x] Host: en las preguntas de un hilo, contador de respuestas y botón "Cambiar de hilo" (necesita `updateQuestion` con `groupId` y `Question.answerCount` del backend)
+- [x] Sesiones por cuenta (host y participante guardados a la vez en el dispositivo, `src/lib/sessions.ts`): cambio de cuenta desde Perfil sin volver a escribir credenciales (se guarda el token, no la contraseña) y "Agregar otra cuenta". Si el servidor está dormido al abrir la app, la sesión **no se borra**: se muestra la pantalla de despertar y se entra sola al despertar
+- [x] Racha por día local (antes agrupaba por UTC y se quedaba corta: 2 en lugar de 5) y no se rompe si hoy aún no se contesta. `collections(timezone)` en el backend + `src/lib/streak.ts`
+- [x] Diario: navegación acotada del primer mes con registro al mes actual y selector de año
+- [ ] Historial: mostrar el contador del mes ("N días con registro este mes") para motivar al usuario. Los datos ya están en memoria: `HistorialTab` baja el mes completo una sola vez (`answersBetween`), de ahí salen la marca y el conteo de cada día y el detalle al tocar un día, sin más llamadas. Al guardar una respuesta se invalidan las consultas del mes y de la racha (`respuestas-month`, `bitacoras-dates`)
+- [ ] Migrar a Tailwind 4 (cierra las 7 vulnerabilidades de build que quedan)
 
 **Seguridad (siguiente fase)**
-- [ ] Auditar vulnerabilidades: `npm audit`, dependencias sin uso, token en `localStorage`, CORS `*` en el backend, mensajes de error de Prisma expuestos al cliente, JWT sin expiración, endpoints REST sin auditar, `Dockerfile` con `node:lts` sin versión fija
-- [ ] Sacar las credenciales de prueba del repo (README y `scripts/test-*.js`), rotar las contraseñas y moverlas a variables de entorno
-- [ ] Limpiar el historial de git si hace falta
+- [x] Dependencias de producción sin vulnerabilidades (`npm audit`)
+- [x] Credenciales fuera de `scripts/*.js` (ahora en `.env.test`, ignorado por git)
+- [ ] **Backend: `.env` estuvo trackeado en git desde 2023** (historial con llaves de SendGrid y Azure Storage). Ya está ignorado; falta rotar esas llaves (ver README del backend)
+- [ ] Rotar las contraseñas de prueba (siguen en el historial de git y en este README) y decidir si se limpia el historial
+- [ ] **Backend, se deja para el final:** `clients` (expone secretos OAuth) sin autenticación; `createHost`, `createClient` y `createRedirectUri` abiertos. `createHost` hoy es la forma de crear el primer super host; hay que construir esa función dentro de Mnestics, protegida por un admin, antes de cerrarlo. Además: JWT sin expiración, errores de Prisma expuestos, CORS `*` (configuración del App Service), `console.log` con datos de usuarios, `Dockerfile` sin versión fija. Detalle en el README del backend.
+- [ ] Token de sesión en `localStorage` (evaluar alternativas)
