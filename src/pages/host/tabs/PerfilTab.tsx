@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { LogOut, Settings, Mail, Shield, Camera } from 'lucide-react'
 import AccountSwitcher from '@/components/AccountSwitcher'
+import MnesticsLogo from '@/components/MnesticsLogo'
 import type { Host } from '@/types'
 
 function getStoredAvatar(hostId: string): string | null {
@@ -42,7 +43,7 @@ export default function PerfilTab() {
       {/* Banner */}
       <div className="relative">
         <div className="h-28 bg-[#2D2440] flex items-center justify-center">
-          <img src="/logo_png.png" alt="" className="h-10 opacity-20 object-contain" />
+          <MnesticsLogo size="md" variant="minimal" className="opacity-30" />
         </div>
 
         {/* Avatar */}

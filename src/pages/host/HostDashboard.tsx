@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import { BookOpen, Users, Layers, User, Menu, X, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import MnesticsLogo from '@/components/MnesticsLogo'
 import type { Host } from '@/types'
 import BitacorasTab from './tabs/BitacorasTab'
 import HilosTab from './tabs/HilosTab'
@@ -33,7 +34,7 @@ export default function HostDashboard() {
           <Menu size={20} className="text-[#2D2440]" />
         </button>
         <div className="flex-1 flex items-center justify-center gap-2">
-          <img src="/logo_png.png" alt="Mnestics" className="w-6 h-6 object-contain" />
+          <MnesticsLogo size="xs" variant="minimal" />
           <span className="text-[11px] font-black tracking-[.2em] text-[#2D2440] uppercase">Host</span>
         </div>
         <div className="w-9" />
@@ -46,7 +47,7 @@ export default function HostDashboard() {
           <div className="fixed top-0 left-0 h-full w-72 bg-white z-50 flex flex-col shadow-2xl">
             <div className="flex items-center justify-between p-4 border-b border-[#DDD5EE]">
               <div className="flex items-center gap-2">
-                <img src="/logo_png.png" alt="" className="w-8 h-8 object-contain" />
+                <MnesticsLogo size="sm" variant="minimal" />
                 <span className="text-sm font-black tracking-widest text-[#2D2440] uppercase">Mnestics</span>
               </div>
               <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#EDE9F8]">

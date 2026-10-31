@@ -2,7 +2,7 @@
 
 PWA para registrar hábitos y respuestas diarias. El host (coach/terapeuta) crea **Hilos** con preguntas, invita **usuarios** y revisa sus **Bitácoras**; el usuario responde preguntas organizadas por **Nudo** (momento del día) y las ve en una trenza animada.
 
-- **Marca:** Mnestics — `mnestics.app`. Antes se llamaba Fulla: el paquete y las claves de `localStorage` ya son `mnestics`, y al arrancar la app migra las claves `fulla:*` viejas para no perder sesiones ni avatares. La carpeta del repo local y los nombres de recursos de Azure no se renombraron.
+- **Marca:** Mnestics — `mnestics.app`. El paquete, el manifest y las claves de `localStorage` ya son `mnestics`; al arrancar, la app migra las claves del nombre anterior para no perder sesiones ni avatares (`migrateLegacyStorage` en `src/lib/utils.ts`; se puede quitar cuando todos los usuarios hayan abierto la app una vez). La carpeta del repo local y el repo de GitHub conservan el nombre anterior.
 - **Sitio:** https://purple-pebble-004ec2710.7.azurestaticapps.net
 - **Backend:** `https://delta-habits.azurewebsites.net/graphql` — repo aparte: [Delta-Habits/backend](https://github.com/Delta-Habits/backend) (ver sección *Backend*)
 - **Última verificación de este README:** 2026-10-09
@@ -172,7 +172,7 @@ src/
 
 ## Limpieza realizada (2026-10-16)
 
-- Eliminado el código huérfano: `CapturasTab.tsx`, `HilosTab.tsx` (usuario) y `HoyTab.tsx`, más la paleta de Tailwind `fulla` y los alias `nodosApi` / `dimensionesApi`.
+- Eliminado el código huérfano: `CapturasTab.tsx`, `HilosTab.tsx` (usuario) y `HoyTab.tsx`, más la paleta de Tailwind anterior y los alias `nodosApi` / `dimensionesApi`.
 - Eliminadas dependencias sin uso: `browser-image-compression`, `vaul`, `next-themes`, `@tanstack/react-query-devtools`, `workbox-window`.
 - `npm audit fix`: **0 vulnerabilidades en dependencias de producción**. Quedan 7 en la cadena de build de Tailwind 3 (`braces`, `micromatch`, `postcss-selector-parser`…); solo afectan al desarrollo y arreglarlas exige migrar a Tailwind 4 (cambio mayor).
 - Eliminados el 2026-10-09: `Redesign/mnestics/` (prototipo de Google AI Studio), `PROGRESS.md`, `ProjectStatus.md` y `DEPLOYMENT_AZURE.md` (guía de otro proyecto).

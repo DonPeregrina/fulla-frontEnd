@@ -9,3 +9,6 @@ dist
 .env.test
 *.tsbuildinfo
 vite.config.d.ts
+
+# Configuración local de herramientas (no va al repo)
+.claude/

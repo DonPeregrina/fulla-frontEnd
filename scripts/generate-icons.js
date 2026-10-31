@@ -58,10 +58,3 @@ await save(sharp(src).resize(32, 32, { fit: 'cover' }), path.join(iconsDir, 'fav
 // favicon.ico tal como lo entrega diseño (versión usuario)
 fs.copyFileSync(path.join(dir, 'favicon_mnestics_usuario.ico'), path.join(root, 'public', 'favicon.ico'))
 console.log('✅  public/favicon.ico')
-
-// Logo de la app (cabecera del host): se muestra a 24–40 px, así que basta una versión de 120 px de alto.
-await save(
-  sharp(path.join(root, 'images', 'logo_png.png')).resize({ height: 120 }),
-  path.join(root, 'public', 'logo_png.png'),
-  120,
-)
