@@ -1,44 +1,60 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { authApi } from '@/services/api'
+import {
+  loadSessions, saveSession, setActiveRole, setLabel, removeSession, clearSessions,
+  type SessionStore,
+} from '@/lib/sessions'
 import type { Host, User, Role, Session } from '@/types'
 
 interface AuthState {
   session: Session | null
   current: Host | User | null
   loading: boolean
+  /** Hay una sesión guardada pero el servidor está dormido o no responde: la sesión NO se borra. */
+  sleeping: boolean
 }
 
 interface AuthContextType extends AuthState {
   login: (identifier: string, password: string) => Promise<void>
+  /** Cierra la cuenta activa; si hay otra guardada, pasa a ella. */
   logout: () => void
+  /** Cambia a la otra cuenta guardada sin pedir credenciales. */
+  switchRole: (role: Role) => void
+  /** Reintenta entrar con la sesión guardada (p. ej. cuando el servidor ya despertó). */
+  retryRestore: () => void
+  /** Olvida las sesiones guardadas en este dispositivo. */
+  forgetSaved: () => void
+  /** Cuentas guardadas en este dispositivo. */
+  accounts: SessionStore
   isHost: boolean
   isUser: boolean
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const SESSION_KEY = 'mnestics:session'
+/** 'auth' = el servidor rechazó el token (se borra); cualquier otra cosa = red/servidor dormido (se conserva). */
+function classify(err: unknown): 'auth' | 'sleeping' {
+  const status = (err as { response?: { status?: number } })?.response?.status
+  if (status === 401 || status === 403) return 'auth'
+  const msg = err instanceof Error ? err.message.toLowerCase() : ''
+  return msg.includes('unauthorized') ? 'auth' : 'sleeping'
+}
+
+function labelOf(role: Role, current: Host | User): string {
+  const c = current as { name?: string; username?: string; email?: string }
+  return (role === 'HOST' ? c.name ?? c.email : c.name ?? c.username) ?? ''
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     session: null,
     current: null,
     loading: true,
+    sleeping: false,
   })
-
-  // Restaurar sesión al arrancar
-  useEffect(() => {
-    const raw = localStorage.getItem(SESSION_KEY)
-    if (!raw) {
-      setState(s => ({ ...s, loading: false }))
-      return
-    }
-    const session: Session = JSON.parse(raw)
-    fetchCurrent(session).catch(() => {
-      localStorage.removeItem(SESSION_KEY)
-      setState({ session: null, current: null, loading: false })
-    })
-  }, [])
+  // Fuerza re-render para refrescar `accounts` (viven en localStorage)
+  const [, setTick] = useState(0)
+  const refresh = () => setTick(t => t + 1)
 
   async function fetchCurrent(session: Session) {
     const result =
@@ -49,8 +65,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const current =
       'currentHost' in result ? result.currentHost :
       'currentUser' in result ? result.currentUser : null
-    setState({ session, current, loading: false })
+    if (current) setLabel(session.role, labelOf(session.role, current))
+    setState({ session, current, loading: false, sleeping: false })
   }
+
+  /** Entra con la sesión guardada del rol. Si el servidor rechaza el token, se descarta y se prueba con la otra. */
+  async function restore(role: Role): Promise<void> {
+    const saved = loadSessions()[role]
+    if (!saved) {
+      setState({ session: null, current: null, loading: false, sleeping: false })
+      return
+    }
+    setActiveRole(role)
+    try {
+      await fetchCurrent({ token: saved.token, role })
+    } catch (err) {
+      if (classify(err) === 'auth') {
+        const next = removeSession(role)
+        refresh()
+        if (next) return restore(next)
+        setState({ session: null, current: null, loading: false, sleeping: false })
+      } else {
+        // Servidor dormido o sin red: se conserva la sesión y se muestra la pantalla de despertar
+        setState({ session: null, current: null, loading: false, sleeping: true })
+      }
+    }
+  }
+
+  // Restaurar sesión al arrancar
+  useEffect(() => {
+    const { active } = loadSessions()
+    if (!active) {
+      setState(s => ({ ...s, loading: false }))
+      return
+    }
+    restore(active)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // identifier: email → HOST, username → USER
   async function login(identifier: string, password: string) {
@@ -81,14 +132,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw err
     }
 
-    const session: Session = { token, role }
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-    await fetchCurrent(session)
+    // Guarda la sesión de este rol (la del otro rol, si la hay, se conserva) y la deja activa
+    saveSession(role, token)
+    refresh()
+    await fetchCurrent({ token, role })
   }
 
   function logout() {
-    localStorage.removeItem(SESSION_KEY)
-    setState({ session: null, current: null, loading: false })
+    const role = state.session?.role
+    const next = role ? removeSession(role) : null
+    refresh()
+    if (next) {
+      setState(s => ({ ...s, loading: true }))
+      restore(next)
+    } else {
+      setState({ session: null, current: null, loading: false, sleeping: false })
+    }
+  }
+
+  function switchRole(role: Role) {
+    if (!loadSessions()[role]) return
+    setState(s => ({ ...s, loading: true }))
+    restore(role)
+  }
+
+  function retryRestore() {
+    const { active } = loadSessions()
+    if (active) restore(active)
+  }
+
+  function forgetSaved() {
+    clearSessions()
+    refresh()
+    setState({ session: null, current: null, loading: false, sleeping: false })
   }
 
   return (
@@ -97,6 +173,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...state,
         login,
         logout,
+        switchRole,
+        retryRestore,
+        forgetSaved,
+        accounts: loadSessions(),
         isHost: state.session?.role === 'HOST',
         isUser: state.session?.role === 'USER',
       }}

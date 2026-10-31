@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -101,7 +101,11 @@ function SystemBanner({ state, countdown, onWake, wasAwakeOnMount }: {
 // ─── SignIn ───────────────────────────────────────────────────────────────────
 
 export default function SignIn() {
-  const { login, session } = useAuth()
+  const { login, session, sleeping, retryRestore, forgetSaved, accounts } = useAuth()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  // ?agregar=1: estando dentro, se agrega otra cuenta sin cerrar la actual
+  const agregando = params.has('agregar')
   const [loading, setLoading] = useState(false)
   const [systemState, setSystemState] = useState<SystemState>('checking')
   const [countdown, setCountdown] = useState(WAKE_ESTIMATE_S)
@@ -131,6 +135,11 @@ export default function SignIn() {
     }
   }, [])
 
+  // Hay sesión guardada pero el servidor estaba dormido: en cuanto despierta, se entra sola (sin escribir nada)
+  useEffect(() => {
+    if (sleeping && systemState === 'awake') retryRestore()
+  }, [sleeping, systemState])
+
   function startWaking() {
     if (pollRef.current) clearInterval(pollRef.current)
     if (countdownRef.current) clearInterval(countdownRef.current)
@@ -146,12 +155,13 @@ export default function SignIn() {
     }, POLL_INTERVAL_MS)
   }
 
-  if (session) return <Navigate to={session.role === 'HOST' ? '/host' : '/user'} replace />
+  if (session && !agregando) return <Navigate to={session.role === 'HOST' ? '/host' : '/user'} replace />
 
   async function onSubmit(data: FormData) {
     setLoading(true)
     try {
       await login(data.identifier, data.password)
+      if (agregando) navigate(data.identifier.includes('@') ? '/host' : '/user', { replace: true })
     } catch (err: any) {
       if (err?.code === 'SLEEPING') startWaking()
       else toast.error('Credenciales incorrectas')
@@ -183,6 +193,29 @@ export default function SignIn() {
             Stable memory core <span className="text-mn-gold">•</span> dynamic reveal
           </p>
         </div>
+
+        {/* Sesión guardada y servidor dormido: la sesión no se pierde */}
+        {sleeping && (
+          <div className="mb-4 rounded-2xl border border-[#F0C030]/50 bg-[#F0C030]/10 px-4 py-3 text-center">
+            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-mn-plum">
+              Tu sesión está guardada{[accounts.HOST?.label, accounts.USER?.label].filter(Boolean).length ? ` (${[accounts.HOST?.label, accounts.USER?.label].filter(Boolean).join(' · ')})` : ''}
+            </p>
+            <p className="mt-1 text-[8px] text-[#5A4A7A]">Cuando el sistema despierte entrarás sola, sin escribir nada.</p>
+            <button onClick={forgetSaved} className="mt-2 text-[8px] font-bold uppercase tracking-widest text-[#E8503A] underline underline-offset-2">
+              Usar otra cuenta
+            </button>
+          </div>
+        )}
+
+        {agregando && (
+          <div className="mb-4 rounded-2xl border border-[#DDD5EE] bg-white/70 px-4 py-3 text-center">
+            <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-mn-plum">Agregar otra cuenta</p>
+            <p className="mt-1 text-[8px] text-[#5A4A7A]">Se guarda junto a la actual y podrás cambiar de una a otra desde Perfil.</p>
+            <button onClick={() => navigate(-1)} className="mt-2 text-[8px] font-bold uppercase tracking-widest text-mn-sky underline underline-offset-2">
+              Cancelar
+            </button>
+          </div>
+        )}
 
         {/* Banner de estado */}
         <SystemBanner state={systemState} countdown={countdown} onWake={startWaking} wasAwakeOnMount={wasAwakeOnMount} />

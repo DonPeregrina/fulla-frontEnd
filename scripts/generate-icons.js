@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// generate-icons.js — Genera los iconos de la PWA de Mnestics (la μ) para los dos "modos":
-//   usuario → images/NewMnestics/mnestics_usuario_1024.png  (μ sobre fondo oscuro)
-//   host    → images/NewMnestics/host.png                   (μ con escudo y engrane)
+// generate-icons.js — Genera los iconos de la PWA de Mnestics (la μ) desde images/NewMnestics/mnestics_usuario_1024.png
+// (versión oscura). Las imágenes de images/ son solo la FUENTE: no se publican, solo lo que sale a public/.
 // Run: npm i --no-save sharp && node scripts/generate-icons.js
 
 import sharp from 'sharp'
@@ -15,7 +14,7 @@ const iconsDir = path.join(root, 'public', 'icons')
 fs.mkdirSync(iconsDir, { recursive: true })
 
 const save = async (img, file, size) => {
-  await img.png({ compressionLevel: 9, palette: true, quality: 90, effort: 10 }).toFile(file)
+  await img.png({ compressionLevel: 9, palette: true, quality: 80, effort: 10 }).toFile(file)
   console.log(`✅  ${path.relative(root, file)} (${size}×${size}, ${(fs.statSync(file).size / 1024).toFixed(0)} KB)`)
 }
 
@@ -48,20 +47,21 @@ async function maskable(src, file) {
   await save(sharp(composed).resize(512, 512), file, 512)
 }
 
-const sets = [
-  { src: path.join(dir, 'mnestics_usuario_1024.png'), suffix: '' },       // usuario
-  { src: path.join(dir, 'host.png'), suffix: '-host' },                   // host
-]
-
-for (const { src, suffix } of sets) {
-  for (const size of [192, 512]) {
-    await save(sharp(src).resize(size, size, { fit: 'cover' }), path.join(iconsDir, `icon${suffix}-${size}.png`), size)
-  }
-  await maskable(src, path.join(iconsDir, `icon${suffix}-maskable-512.png`))
-  await save(sharp(src).resize(180, 180, { fit: 'cover' }), path.join(root, 'public', `apple-touch-icon${suffix}.png`), 180)
-  await save(sharp(src).resize(32, 32, { fit: 'cover' }), path.join(iconsDir, `favicon${suffix}-32.png`), 32)
+const src = path.join(dir, 'mnestics_usuario_1024.png')
+for (const size of [192, 512]) {
+  await save(sharp(src).resize(size, size, { fit: 'cover' }), path.join(iconsDir, `icon-${size}.png`), size)
 }
+await maskable(src, path.join(iconsDir, 'icon-maskable-512.png'))
+await save(sharp(src).resize(180, 180, { fit: 'cover' }), path.join(root, 'public', 'apple-touch-icon.png'), 180)
+await save(sharp(src).resize(32, 32, { fit: 'cover' }), path.join(iconsDir, 'favicon-32.png'), 32)
 
 // favicon.ico tal como lo entrega diseño (versión usuario)
 fs.copyFileSync(path.join(dir, 'favicon_mnestics_usuario.ico'), path.join(root, 'public', 'favicon.ico'))
 console.log('✅  public/favicon.ico')
+
+// Logo de la app (cabecera del host): se muestra a 24–40 px, así que basta una versión de 120 px de alto.
+await save(
+  sharp(path.join(root, 'images', 'logo_png.png')).resize({ height: 120 }),
+  path.join(root, 'public', 'logo_png.png'),
+  120,
+)

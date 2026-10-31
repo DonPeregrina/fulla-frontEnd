@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { activeToken } from '@/lib/sessions'
 
 // ─── Cliente ──────────────────────────────────────────────────────────────────
 
@@ -10,11 +11,8 @@ export const httpClient = axios.create({
 })
 
 httpClient.interceptors.request.use((config) => {
-  const raw = localStorage.getItem('mnestics:session')
-  if (raw) {
-    const session = JSON.parse(raw)
-    config.headers.Authorization = `Bearer ${session.token}`
-  }
+  const token = activeToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 

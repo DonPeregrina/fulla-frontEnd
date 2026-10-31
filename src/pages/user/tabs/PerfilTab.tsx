@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { LogOut, Settings, Bell, LayoutGrid, Camera } from 'lucide-react'
+import AccountSwitcher from '@/components/AccountSwitcher'
 import type { User } from '@/types'
 import MnesticsLogo from '@/components/MnesticsLogo'
 
@@ -108,6 +109,7 @@ export default function PerfilTab() {
             <Bell size={16} className="text-mn-sky" />
             Notificaciones
           </button>
+          <AccountSwitcher />
           <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3.5 text-left text-[9px] font-bold uppercase tracking-widest text-[#E8503A]">
             <LogOut size={16} />
             Desconectar Core

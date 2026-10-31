@@ -8,9 +8,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.png', 'apple-touch-icon.png', 'favicon.ico'],
+      includeAssets: ['icons/icon-192.png', 'icons/favicon-32.png', 'apple-touch-icon.png', 'favicon.ico'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Los íconos grandes solo se piden al instalar la app; no hace falta guardarlos para uso sin conexión
+        globIgnores: ['icons/icon-512.png', 'icons/icon-maskable-512.png'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/delta-habits\.azurewebsites\.net\/graphql/,
