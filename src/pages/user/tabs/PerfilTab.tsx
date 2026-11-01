@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { LogOut, Settings, Bell, LayoutGrid, Camera } from 'lucide-react'
 import AccountSwitcher from '@/components/AccountSwitcher'
+import VoiceSettings from '@/components/VoiceSettings'
 import type { User } from '@/types'
 import MnesticsLogo from '@/components/MnesticsLogo'
 
@@ -98,6 +99,9 @@ export default function PerfilTab() {
             </div>
           )}
         </section>
+
+        {/* Asistente de voz: dictado, voz y modo pruebas */}
+        <VoiceSettings />
 
         {/* Acciones */}
         <div className="bg-white rounded-2xl border border-[#DDD5EE] divide-y divide-[#DDD5EE] overflow-hidden">

@@ -5,7 +5,7 @@ import { motion } from 'motion/react'
 import { toast } from 'sonner'
 import { CheckCircle2, X, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getNudos, getHiloNombre, respuestasApi } from '@/services/api'
+import { getNudos, getHiloNombre, preguntasApi, respuestasApi } from '@/services/api'
 import { nudoColor, type Pregunta, type Respuesta } from '@/types'
 import { todayISO } from '@/lib/utils'
 import { BraidCanvas, type HiloCanvas } from '@/components/BraidCanvas'
@@ -197,6 +197,14 @@ export default function NudosTab() {
     staleTime: 1000 * 60 * 10,
   })
 
+  // Preguntas asignadas (con nombre de hilo), incluidas las que aún no tienen respuestas. null = backend sin la consulta
+  const { data: asignadas, isLoading: cargandoAsignadas } = useQuery({
+    queryKey: ['my-questions', userId],
+    queryFn: preguntasApi.mine,
+    enabled: !!userId,
+    staleTime: 1000 * 60 * 10,
+  })
+
   const mutation = useMutation({
     mutationFn: async ({ questionId, body, respuestaId }: { questionId: string; body: string; respuestaId?: string }) => {
       if (respuestaId) { await respuestasApi.update(respuestaId, body); return }
@@ -213,7 +221,8 @@ export default function NudosTab() {
   const todasRespuestas: Respuesta[] = respuestasData?.answers ?? []
   const preguntasMap: Record<string, Pregunta> = {}
   todasRespuestas.forEach(r => { if (r.question) preguntasMap[r.question.id] = r.question })
-  const todasPreguntas = Object.values(preguntasMap)
+  // Si el backend aún no tiene `myQuestions`, se deducen de las respuestas recientes (comportamiento anterior)
+  const todasPreguntas: Pregunta[] = asignadas ?? Object.values(preguntasMap)
 
   const respuestasHoy = todasRespuestas.filter(r => isToday(r.createdAt))
   const respuestasHoyMap = Object.fromEntries(respuestasHoy.map(r => [r.questionId, r]))
@@ -254,7 +263,7 @@ export default function NudosTab() {
   function goNext() { setActiveNudoIdx(i => Math.min(nudosConHilos.length - 1, i + 1)); setSeleccion(null) }
   function goPrev() { setActiveNudoIdx(i => Math.max(0, i - 1)); setSeleccion(null) }
 
-  if (isLoading) return <Skeleton />
+  if (isLoading || cargandoAsignadas) return <Skeleton />
 
   if (nudosConHilos.length === 0) {
     return (

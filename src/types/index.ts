@@ -50,6 +50,12 @@ export interface Pregunta {
   answerCount?: number | null
 }
 
+/** Pregunta asignada al participante, con el nombre de su hilo y de su nudo (consulta `myQuestions`). */
+export interface PreguntaAsignada extends Pregunta {
+  groupName: string
+  categoryName: string | null
+}
+
 // ─── Respuestas (Answers en el schema) ───────────────────────────────────────
 
 export interface Respuesta {
