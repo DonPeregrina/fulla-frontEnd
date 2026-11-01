@@ -238,6 +238,15 @@ const HILOS_FALLBACK: Record<string, string> = {
   'fe883216-d634-48af-b020-3b4d4cd10266': 'Activo',
 }
 
+/** Guarda los nombres de hilo recibidos para que `getHiloNombre` los resuelva sin otra consulta. */
+function cacheGroupNames(rows: { groupId: string; groupName: string }[]) {
+  try {
+    const map: Record<string, string> = JSON.parse(localStorage.getItem('mnestics:group-names') ?? '{}')
+    rows.forEach(r => { if (r.groupName) map[r.groupId] = r.groupName })
+    localStorage.setItem('mnestics:group-names', JSON.stringify(map))
+  } catch { /* sin almacenamiento */ }
+}
+
 /** Nombre de un hilo: localStorage → fallback hardcodeado → UUID corto */
 export function getHiloNombre(hiloId: string): string {
   try {
@@ -264,6 +273,23 @@ export const nudosApi = {
 // Las preguntas vienen anidadas en Group — acá solo mutations
 
 export const preguntasApi = {
+  /**
+   * Preguntas de los hilos del participante (incluidas las que aún no tienen respuestas), con el nombre del hilo.
+   * Devuelve null si el backend todavía no tiene la consulta; el llamador usa entonces el método anterior.
+   */
+  mine: async (): Promise<import('@/types').PreguntaAsignada[] | null> => {
+    try {
+      const d = await gql<{ myQuestions: import('@/types').PreguntaAsignada[] }>(`
+        query MyQuestions { myQuestions { id body groupId groupName categoryId categoryName } }
+      `)
+      cacheGroupNames(d.myQuestions)
+      return d.myQuestions
+    } catch (e) {
+      if (isMissingField(e)) return null
+      throw e
+    }
+  },
+
   create: (body: string, groupId: string, categoryId: string) =>
     gql<{ createQuestion: { question: import('@/types').Pregunta } }>(`
       mutation CreateQuestion($input: CreateQuestionInput!) {
@@ -479,4 +505,45 @@ export const healthApi = {
       return 'sleeping'
     }
   },
+}
+
+// ─── Asistente de voz ─────────────────────────────────────────────────────────
+// Rutas REST del backend (/voice/*): solo participantes. Las llaves de Claude, Groq, ElevenLabs y Deepgram
+// viven en el servidor; aquí solo viaja el audio, el texto y una llave temporal de dictado.
+
+export interface VoiceQuestion { id: string; body: string; hilo: string; imagen: boolean }
+
+export interface VoiceTurn {
+  reply: string
+  done: boolean
+  /** Respuestas que el agente registró en este turno (en modo pruebas se reportan pero no se guardan). */
+  saved: { questionId: string; body: string; imagen: boolean }[]
+  /** Pregunta que el asistente acaba de plantear (si planteó una) y si lleva imagen. */
+  question?: VoiceQuestion
+  /** Momento del día (nudo) consultado en este turno, si cambió. */
+  moment?: string
+  /** Historial opaco: se devuelve tal cual en el siguiente turno (incluye las herramientas que usó el agente). */
+  history: unknown[]
+}
+
+export const voiceApi = {
+  agent: (text: string, history: unknown[], timezone: string, dryRun = false) =>
+    httpClient.post<VoiceTurn>('/voice/agent', { text, history, timezone, dryRun }).then(r => r.data),
+
+  /** Imagen (JPEG) de lo dicho en el momento del día; se genera de nuevo cada vez, no se edita la anterior. */
+  image: (questionId: string, description: string) =>
+    httpClient.post<Blob>('/voice/image', { questionId, description }, { responseType: 'blob' }).then(r => r.data),
+
+  stt: (audio: Blob, lang: string) =>
+    httpClient
+      .post<{ text: string }>(`/voice/stt?lang=${encodeURIComponent(lang)}`, audio, {
+        headers: { 'Content-Type': audio.type || 'audio/webm' },
+      })
+      .then(r => r.data.text),
+
+  tts: (text: string) =>
+    httpClient.post<Blob>('/voice/tts', { text }, { responseType: 'blob' }).then(r => r.data),
+
+  deepgramToken: () =>
+    httpClient.get<{ token: string }>('/voice/deepgram-token').then(r => r.data.token),
 }
