@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { LogOut, Settings, Bell, LayoutGrid, Camera } from 'lucide-react'
 import AccountSwitcher from '@/components/AccountSwitcher'
-import TestModeSwitch from '@/components/TestModeSwitch'
+import VoiceSettings from '@/components/VoiceSettings'
 import type { User } from '@/types'
 import MnesticsLogo from '@/components/MnesticsLogo'
 
@@ -100,6 +100,9 @@ export default function PerfilTab() {
           )}
         </section>
 
+        {/* Asistente de voz: dictado, voz y modo pruebas */}
+        <VoiceSettings />
+
         {/* Acciones */}
         <div className="bg-white rounded-2xl border border-[#DDD5EE] divide-y divide-[#DDD5EE] overflow-hidden">
           <button className="w-full flex items-center gap-3 px-4 py-3.5 text-left text-[9px] font-bold uppercase tracking-widest text-mn-plum">
@@ -110,7 +113,6 @@ export default function PerfilTab() {
             <Bell size={16} className="text-mn-sky" />
             Notificaciones
           </button>
-          <TestModeSwitch />
           <AccountSwitcher />
           <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3.5 text-left text-[9px] font-bold uppercase tracking-widest text-[#E8503A]">
             <LogOut size={16} />

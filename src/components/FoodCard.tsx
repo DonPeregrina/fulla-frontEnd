@@ -8,6 +8,12 @@ const SLOTS = [
   { x: 34, y: 70 }, { x: 66, y: 72 }, { x: 14, y: 62 }, { x: 88, y: 70 }, { x: 50, y: 50 },
 ]
 
+/** Los momentos del día son etiquetas fijas heredadas; aquí se muestran con su significado. */
+const MOMENT_LABEL: Record<string, string> = {
+  'WAKING UP': 'AL DESPERTAR', MORNING: 'MAÑANA', AFTERNOON: 'TARDE', EVENING: 'ATARDECER', NIGHT: 'NOCHE', MEAL: 'BOTANAS',
+}
+const momentLabel = (m: string) => MOMENT_LABEL[m] ?? m
+
 function fileCode(id: string): string {
   let hash = 0
   for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash)
@@ -48,7 +54,7 @@ export default function FoodCard({
   listening: boolean
   compact: boolean
 }) {
-  const said = (data?.texts ?? []).join(' ')
+  const said = Object.values(data?.answers ?? {}).join(' ')
   const hits = detectFoods(`${said} ${live}`)
   const image = data?.imageUrl
 
@@ -57,7 +63,7 @@ export default function FoodCard({
     return (
       <div className="self-start flex items-center gap-2 rounded-2xl border border-[#DDD5EE] bg-white px-3 py-2">
         {image ? <img src={image} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="text-xl">🍽️</span>}
-        <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-mn-sky">{moment} · registrado</span>
+        <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-mn-sky">{momentLabel(moment)} · registrado</span>
       </div>
     )
   }
@@ -65,7 +71,7 @@ export default function FoodCard({
   return (
     <div className="self-stretch rounded-[20px] border border-[#DDD5EE] bg-white p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="rounded-full bg-[#2D2440] px-2.5 py-1 font-mono text-[8px] font-bold tracking-[0.1em] text-[#F0C030]">{moment}</span>
+        <span className="rounded-full bg-[#2D2440] px-2.5 py-1 font-mono text-[8px] font-bold tracking-[0.1em] text-[#F0C030]">{momentLabel(moment)}</span>
         <span className="font-mono text-[8px] font-bold tracking-[0.06em] text-mn-sky">{fileCode(questionId)} // INGESTA</span>
       </div>
 

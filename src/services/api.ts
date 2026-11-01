@@ -511,13 +511,13 @@ export const healthApi = {
 // Rutas REST del backend (/voice/*): solo participantes. Las llaves de Claude, Groq, ElevenLabs y Deepgram
 // viven en el servidor; aquí solo viaja el audio, el texto y una llave temporal de dictado.
 
-export interface VoiceQuestion { id: string; body: string; hilo: string; imagen: boolean }
+export interface VoiceQuestion { id: string; body: string; hilo: string; imagen: boolean; nudo: string | null }
 
 export interface VoiceTurn {
   reply: string
   done: boolean
   /** Respuestas que el agente registró en este turno (en modo pruebas se reportan pero no se guardan). */
-  saved: { questionId: string; body: string; imagen: boolean }[]
+  saved: { questionId: string; body: string; imagen: boolean; nudo: string | null; visual?: string }[]
   /** Pregunta que el asistente acaba de plantear (si planteó una) y si lleva imagen. */
   question?: VoiceQuestion
   /** Momento del día (nudo) consultado en este turno, si cambió. */

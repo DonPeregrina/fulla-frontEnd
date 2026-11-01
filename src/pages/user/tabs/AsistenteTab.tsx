@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Mic, RotateCcw, Send, CheckCircle2, FlaskConical } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Mic, RotateCcw, Send, CheckCircle2 } from 'lucide-react'
 import FoodCard from '@/components/FoodCard'
-import { setTestMode } from '@/lib/voice/testMode'
 import { ENGINES } from '@/lib/voice/engines'
-import { useAssistant, type Status, type VoiceOut } from '@/lib/voice/useAssistant'
+import { useAssistant, type Status } from '@/lib/voice/useAssistant'
 
 const STATUS_LABEL: Record<Status, string> = {
   idle: 'Mantén para hablar',
@@ -11,16 +11,6 @@ const STATUS_LABEL: Record<Status, string> = {
   thinking: 'Pensando…',
   speaking: 'Hablando… (toca para interrumpir)',
 }
-
-const VOICES: { id: VoiceOut; label: string }[] = [
-  { id: 'elevenlabs', label: 'ElevenLabs' },
-  { id: 'browser', label: 'Navegador' },
-]
-
-const chip = (active: boolean, disabled = false) =>
-  `px-3 py-2 rounded-xl border text-[9px] font-bold uppercase tracking-widest transition-colors ${
-    active ? 'bg-[#1A1535] border-[#1A1535] text-[#F0C030]' : 'bg-white border-[#DDD5EE] text-mn-plum'
-  } ${disabled ? 'opacity-35' : ''}`
 
 export default function AsistenteTab() {
   const a = useAssistant()
@@ -48,33 +38,11 @@ export default function AsistenteTab() {
         )}
       </div>
 
-      {/* Ajustes de prueba: motor de dictado y voz */}
-      <div className="bg-white border border-[#DDD5EE] rounded-[20px] p-3 space-y-2">
-        <p className="font-mono text-[8px] font-bold text-mn-sky tracking-[0.12em] uppercase">Dictado</p>
-        <div className="flex flex-wrap gap-2">
-          {ENGINES.map(e => (
-            <button
-              key={e.id}
-              onClick={() => e.supported() && a.setEngineId(e.id)}
-              disabled={!e.supported()}
-              title={e.hint}
-              className={chip(a.engineId === e.id, !e.supported())}
-            >
-              {e.label}{e.live ? ' · en vivo' : ''}
-            </button>
-          ))}
-        </div>
-        <p className="font-mono text-[8px] font-bold text-mn-sky tracking-[0.12em] uppercase pt-1">Voz del asistente</p>
-        <div className="flex flex-wrap gap-2">
-          {VOICES.map(v => (
-            <button key={v.id} onClick={() => a.setVoiceOut(v.id)} className={chip(a.voiceOut === v.id)}>{v.label}</button>
-          ))}
-        </div>
-        <p className="font-mono text-[8px] font-bold text-mn-sky tracking-[0.12em] uppercase pt-1">Pruebas</p>
-        <button onClick={() => setTestMode(!a.testMode)} className={`${chip(a.testMode)} flex items-center gap-1.5`}>
-          <FlaskConical size={12} /> Modo pruebas · {a.testMode ? 'no guarda' : 'guarda'}
-        </button>
-      </div>
+      {/* Los ajustes (dictado, voz, modo pruebas) viven en Perfil */}
+      <p className="font-mono text-[8px] tracking-[0.06em] text-[#B0A8CC]">
+        Dictado: {ENGINES.find(e => e.id === a.engineId)?.label} · Voz: {a.voiceOut === 'elevenlabs' ? 'ElevenLabs' : 'Navegador'} ·{' '}
+        <Link to="/user/perfil" className="font-bold text-mn-sky underline">cambiar en Perfil</Link>
+      </p>
 
       {!a.started ? (
         <div className="flex flex-col items-center justify-center text-center gap-4 py-10">

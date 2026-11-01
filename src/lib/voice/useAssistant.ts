@@ -3,11 +3,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { voiceApi, type VoiceQuestion } from '@/services/api'
-import { defaultEngineId, getEngine, type EngineId, type Lang, type ListenSession } from './engines'
+import { getEngine, type Lang, type ListenSession } from './engines'
+import { useVoiceSettings } from './settings'
 import { isTestMode, useTestMode } from './testMode'
 
 export type Status = 'idle' | 'listening' | 'thinking' | 'speaking'
-export type VoiceOut = 'elevenlabs' | 'browser'
 
 /** Un renglón del chat: burbuja del usuario, burbuja del asistente o la tarjeta de imagen de una pregunta de nutrición. */
 export interface Line {
@@ -19,9 +19,13 @@ export interface Line {
   moment?: string
 }
 
-/** Lo dicho en un momento del día para las preguntas con imagen, y la imagen que se generó con todo eso. */
+/**
+ * Lo dicho en un momento del día para las preguntas con imagen, y la imagen que se generó con todo eso.
+ * `answers` guarda la ÚLTIMA respuesta de cada pregunta (igual que la base de datos: una respuesta por pregunta y día),
+ * así una corrección reemplaza lo anterior en lugar de sumarse.
+ */
 export interface MomentData {
-  texts: string[]
+  answers: Record<string, string>
   imageUrl?: string
   generating: boolean
 }
@@ -30,19 +34,7 @@ export interface MomentData {
 const LANG: Lang = 'es'
 const DEFAULT_MOMENT = 'MOMENTO'
 
-const KEY_ENGINE = 'mnestics:voice-engine'
-const KEY_VOICE = 'mnestics:voice-out'
 const SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
-
-function read<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
-  try {
-    const v = localStorage.getItem(key) as T | null
-    return v && allowed.includes(v) ? v : fallback
-  } catch { return fallback }
-}
-function write(key: string, value: string) {
-  try { localStorage.setItem(key, value) } catch { /* sin almacenamiento */ }
-}
 
 function friendly(e: unknown): string {
   const err = e as { name?: string; message?: string; response?: { status?: number; data?: { message?: string } } }
@@ -58,10 +50,7 @@ export function useAssistant() {
   const userId = current?.id
   const testMode = useTestMode()
 
-  const [engineId, setEngine] = useState<EngineId>(() =>
-    read(KEY_ENGINE, ['deepgram', 'groq', 'browser'] as const, defaultEngineId()),
-  )
-  const [voiceOut, setVoice] = useState<VoiceOut>(() => read(KEY_VOICE, ['elevenlabs', 'browser'] as const, 'elevenlabs'))
+  const { engineId, voiceOut } = useVoiceSettings()
   const [lines, setLines] = useState<Line[]>([])
   const [status, setStatus] = useState<Status>('idle')
   const [partial, setPartial] = useState('')
@@ -81,14 +70,11 @@ export function useAssistant() {
   const momentsRef = useRef<Record<string, MomentData>>({})
   const drawSeq = useRef<Record<string, number>>({})
 
-  const setEngineId = (id: EngineId) => { setEngine(id); write(KEY_ENGINE, id) }
-  const setVoiceOut = (v: VoiceOut) => { setVoice(v); write(KEY_VOICE, v) }
-
   const addLine = (line: Omit<Line, 'id'>) =>
     setLines(l => [...l, { id: ++lineId.current, ...line }])
 
   function updateMoment(key: string, fn: (m: MomentData) => MomentData) {
-    const next = fn(momentsRef.current[key] ?? { texts: [], generating: false })
+    const next = fn(momentsRef.current[key] ?? { answers: {}, generating: false })
     momentsRef.current = { ...momentsRef.current, [key]: next }
     setMoments(momentsRef.current)
   }
@@ -97,11 +83,16 @@ export function useAssistant() {
    * Genera la imagen del momento del día con TODO lo dicho hasta ahora (plato y bebida). Se genera de nuevo cada vez,
    * no se edita la anterior: así no se acumula deriva. Si llega una respuesta nueva mientras se dibuja, gana la última.
    */
-  async function drawMoment(key: string, questionId: string, newTexts: string[]) {
+  async function drawMoment(key: string, saved: { questionId: string; body: string }[]) {
     const seq = (drawSeq.current[key] = (drawSeq.current[key] ?? 0) + 1)
-    updateMoment(key, m => ({ ...m, texts: [...m.texts, ...newTexts], generating: true }))
+    updateMoment(key, m => ({
+      ...m,
+      answers: { ...m.answers, ...Object.fromEntries(saved.map(s => [s.questionId, s.body])) },
+      generating: true,
+    }))
     try {
-      const blob = await voiceApi.image(questionId, momentsRef.current[key].texts.join(', '))
+      const description = Object.values(momentsRef.current[key].answers).join(', ')
+      const blob = await voiceApi.image(saved[saved.length - 1].questionId, description)
       if (seq !== drawSeq.current[key]) return
       const url = URL.createObjectURL(blob)
       const old = momentsRef.current[key]?.imageUrl
@@ -177,6 +168,7 @@ export function useAssistant() {
 
       if (turn.question) {
         setQuestion(turn.question)
+        if (turn.question.nudo) momentRef.current = turn.question.nudo.toUpperCase()
         if (turn.question.imagen) {
           addLine({ who: 'card', text: '', questionId: turn.question.id, moment: momentRef.current })
         }
@@ -196,11 +188,16 @@ export function useAssistant() {
           qc.invalidateQueries({ queryKey: ['respuestas-month', userId] })
           qc.invalidateQueries({ queryKey: ['bitacoras-dates', userId] })
         }
-        const withImage = turn.saved.filter(s => s.imagen)
-        if (withImage.length > 0) {
-          // La imagen se dibuja mientras el asistente habla, sin hacerlo esperar
-          void drawMoment(momentRef.current, withImage[withImage.length - 1].questionId, withImage.map(s => s.body))
-        }
+        // Solo se dibuja lo que trae descripción visual (comida o bebida); un peso o un "nada" no genera imagen
+        const withImage = turn.saved.filter(s => s.imagen && s.visual).map(s => ({ ...s, body: s.visual! }))
+        // Cada respuesta pertenece al momento de SU pregunta (puede ser uno anterior si el usuario corrige algo).
+        // La imagen se dibuja mientras el asistente habla, sin hacerlo esperar.
+        const byMoment = new Map<string, typeof withImage>()
+        withImage.forEach(item => {
+          const key = (item.nudo ?? momentRef.current).toUpperCase()
+          byMoment.set(key, [...(byMoment.get(key) ?? []), item])
+        })
+        byMoment.forEach((items, key) => { void drawMoment(key, items) })
       }
       if (turn.done) setDone(true)
       await speak(turn.reply)
@@ -257,7 +254,7 @@ export function useAssistant() {
   async function begin() {
     unlockAudio()
     setStarted(true)
-    await send('Hola', { silent: true })
+    await send('[inicio]', { silent: true })
   }
 
   function reset() {
@@ -296,7 +293,7 @@ export function useAssistant() {
   }, [])
 
   return {
-    engineId, setEngineId, voiceOut, setVoiceOut, testMode,
+    engineId, voiceOut, testMode,
     lines, status, partial, started, done, savedCount, question, moments,
     begin, pressStart, pressEnd, sendText, reset,
   }

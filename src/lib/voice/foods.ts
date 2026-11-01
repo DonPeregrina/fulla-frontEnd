@@ -43,7 +43,7 @@ const FOODS: FoodEntry[] = [
   { key: 'hamburguesa', label: 'hamburguesa', emoji: '🍔', words: ['hamburguesa', 'hamburguesas', 'hotdog'] },
   { key: 'sandwich', label: 'sándwich', emoji: '🥪', words: ['sandwich', 'torta', 'tortas', 'emparedado'] },
   { key: 'tamal', label: 'tamal', emoji: '🫔', words: ['tamal', 'tamales'] },
-  { key: 'dulce', label: 'postre', emoji: '🍰', words: ['pastel', 'postre', 'galleta', 'galletas', 'chocolate', 'helado', 'dulce', 'dulces', 'pay', 'flan'] },
+  { key: 'dulce', label: 'postre', emoji: '🍰', words: ['pastel', 'postre', 'galleta', 'galletas', 'chocolate', 'helado', 'dulce', 'dulces', 'pay', 'flan', 'dona', 'donas', 'donita', 'donitas', 'donut', 'donuts', 'pan dulce', 'concha', 'conchas'] },
   { key: 'nueces', label: 'nueces', emoji: '🥜', words: ['nuez', 'nueces', 'almendra', 'almendras', 'cacahuate', 'cacahuates'] },
 ]
 
