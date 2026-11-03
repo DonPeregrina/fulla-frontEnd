@@ -72,7 +72,7 @@ Scripts en `scripts/` (Node 18+, pegan al backend **real**):
 | `node scripts/test-nudos.js` | Prueba de Nudos |
 | `node scripts/test-screens.js` | Diagnóstico de datos por pantalla |
 | `node scripts/ping-backend.js` | Monitorea el arranque del backend (cold start) |
-| `node scripts/generate-icons.js` | Genera los íconos de la PWA con la μ (192, 512, maskable 512, apple-touch 180, favicon 32 y `favicon.ico`) desde `images/NewMnestics/mnestics_usuario_1024.png` (versión oscura). Requiere `npm i --no-save sharp` |
+| `node scripts/generate-icons.js` | Genera los íconos de la PWA con la μ (192, 512, maskable 512, apple-touch 180, favicon 32 y `favicon.ico`) desde `images/New.png` (el ícono sobre fondo negro: se recorta al cuadrado redondeado; el normal lleva esquinas transparentes y el maskable respeta la zona segura de Android). Requiere `npm i --no-save sharp` |
 
 ## Credenciales de prueba
 
@@ -132,13 +132,25 @@ Si vuelve a pasar: reiniciar el App Service y verificar con `node scripts/ping-b
 
 ### Usuario (`/user/*`) — rediseño Mnestics (junio 2026)
 
-Barra inferior con 3 tabs:
+Barra inferior con 4 tabs:
 
 | Tab | Ruta | Archivo | Notas |
 |---|---|---|---|
 | Nodo | `/user` | `NudosTab.tsx` | Pantalla principal: `BraidCanvas` (trenza por Nudo), selector de momento, crear/editar respuesta del día |
-| Diario | `/user/historial` | `HistorialTab.tsx` | Lista paginada (20/página) de respuestas |
+| Asistente | `/user/asistente` | `AsistenteTab.tsx` | Asistente de voz (ver abajo): chat, orbe animado y archivo de imágenes |
+| Diario | `/user/historial` | `HistorialTab.tsx` | Calendario por mes y respuestas del día; bajo las respuestas de comida aparece la imagen archivada en este teléfono |
 | Perfil | `/user/perfil` | `PerfilTab.tsx` | Avatar, afiliaciones, cerrar sesión |
+
+### Asistente de voz (`/user/asistente`)
+
+Chat por voz (pulsar para hablar) que pregunta el momento del día y luego las preguntas pendientes del usuario, una por una, y guarda lo que contesta. El agente (Claude con herramientas) vive en el backend (`/voice/*`, ver su README); el front solo manda audio o texto.
+
+- **Dictado** (Perfil → Asistente de voz): **Deepgram** (texto en vivo; usa una llave temporal que pide al backend), **Groq** (graba y transcribe al soltar) y **Navegador** (reconocimiento del navegador; en Android entrega cada parcial acumulado y `lib/voice/transcript.ts` lo limpia; en iPhone con la app instalada no funciona). La **voz** es ElevenLabs o la del navegador. Los ajustes se guardan por dispositivo.
+- **Modo pruebas** (Perfil): todo funciona pero **no guarda nada** y no archiva imágenes; además ofrece todas las preguntas aunque ya se hayan contestado hoy.
+- **Tarjeta de comida:** en las preguntas de comida o bebida (hilos de nutrición) se abre una tarjeta con las palabras subrayadas y stickers en vivo, y la imagen real (Gemini) se revela encima. Hay **una imagen por momento del día** que se regenera con todo lo contestado (una corrección reemplaza lo anterior). Lo que no describe comida (un peso, "nada") no se dibuja.
+- **Archivo** (pestaña dentro del Asistente): las imágenes se guardan **solo en el teléfono** (IndexedDB, WebP de ≤512 px, una por usuario/día/momento) y se ligan a las preguntas de origen para mostrarse en el Diario. Se pierden si se borran los datos del navegador o se desinstala la app, y no pasan de un dispositivo a otro.
+- **Orbe del agente** (`VoiceOrb`): anillos fuertes cuando habla y tenues en reposo; rojos mientras el usuario graba (`MicButton`).
+- Código: `components/` (`FoodCard`, `VoiceOrb`, `MicButton`, `ArchiveGallery`, `VoiceSettings`, `TestModeSwitch`) y `lib/voice/` (`useAssistant`, `engines`, `transcript`, `foods`, `archive`, `useArchive`, `settings`, `testMode`, `moments`). Los momentos del día son etiquetas heredadas (Waking Up, Morning, Meal = botanas, Afternoon, Evening, Night) y no todos los usuarios usan todos.
 
 `/user/hilos` y `/user/capturas` redirigen a `/user`. Header con `TopNavBar` y `StreakRow` (racha).
 
@@ -156,9 +168,10 @@ Barra inferior con 3 tabs:
 ```
 src/
 ├── App.tsx                 rutas + ProtectedRoute
-├── components/             BraidCanvas, MnesticsLogo, Shell, StreakRow, TopNavBar
+├── components/             BraidCanvas, MnesticsLogo, Shell, StreakRow, TopNavBar, y las del asistente de voz
 ├── contexts/AuthContext    login host/user, sesión en localStorage ('mnestics:session')
 ├── lib/utils.ts            cn, formatDate, toDate, dateToISO
+├── lib/voice/              asistente de voz: motores de dictado, ajustes, archivo local
 ├── pages/
 │   ├── SignIn.tsx          host (email) vs user (username)
 │   ├── host/               HostDashboard, HiloDetail, UsuarioDetail, tabs/

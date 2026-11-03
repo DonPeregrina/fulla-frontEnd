@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { respuestasApi, bitacorasApi, getNudoNombre } from '@/services/api'
 import { nudoColor, type Respuesta } from '@/types'
 import { dateToISO } from '@/lib/utils'
+import { useArchiveImages } from '@/lib/voice/useArchive'
+import { momentLabel } from '@/lib/voice/moments'
 
 function Skeleton() {
   return (
@@ -84,6 +86,10 @@ export default function HistorialTab() {
   const dayAnswers = todasRespuestas
     .filter(r => dateToISO(Number(r.createdAt)) === selectedISO)
     .sort((a, b) => Number(b.createdAt) - Number(a.createdAt))
+
+  // Imágenes de comida de ese día guardadas en este dispositivo (una por momento del día)
+  const imagenesDelDia = useArchiveImages(userId).filter(img => img.day === selectedISO)
+  const imagenMostrada = new Set<string>() // cada imagen se muestra una sola vez, bajo su primera respuesta de origen
 
   if (isLoading) return <Skeleton />
 
@@ -227,6 +233,19 @@ export default function HistorialTab() {
                 <p className="text-sm font-bold" style={{ color: '#F0C030' }}>
                   {r.body}
                 </p>
+                {(() => {
+                  const img = imagenesDelDia.find(i => i.questionIds.includes(r.questionId) && !imagenMostrada.has(i.key))
+                  if (!img) return null
+                  imagenMostrada.add(img.key)
+                  return (
+                    <figure className="pt-1">
+                      <img src={img.url} alt={`Ilustración de lo que consumiste (${momentLabel(img.moment)})`} className="w-full rounded-xl border border-[#DDD5EE]" />
+                      <figcaption className="mt-1 font-mono text-[7px] uppercase tracking-[0.12em] text-[#B0A8CC]">
+                        // IMG · {momentLabel(img.moment)} · solo en este teléfono
+                      </figcaption>
+                    </figure>
+                  )
+                })()}
               </div>
             )
           })

@@ -6,6 +6,9 @@ import { voiceApi, type VoiceQuestion } from '@/services/api'
 import { getEngine, type Lang, type ListenSession } from './engines'
 import { useVoiceSettings } from './settings'
 import { isTestMode, useTestMode } from './testMode'
+import { saveImage } from './archive'
+import { ARCHIVE_KEY } from './useArchive'
+import { todayISO } from '@/lib/utils'
 
 export type Status = 'idle' | 'listening' | 'thinking' | 'speaking'
 
@@ -95,6 +98,15 @@ export function useAssistant() {
       const blob = await voiceApi.image(saved[saved.length - 1].questionId, description)
       if (seq !== drawSeq.current[key]) return
       const url = URL.createObjectURL(blob)
+      // Archivo local: solo en sesiones reales (en modo pruebas no se archiva) y solo la imagen vigente del momento
+      if (userId && !isTestMode()) {
+        void saveImage({
+          userId, day: todayISO(), moment: key, description, image: blob,
+          questionIds: Object.keys(momentsRef.current[key].answers),
+        }).then(ok => {
+          if (ok) qc.invalidateQueries({ queryKey: [ARCHIVE_KEY, userId] })
+        })
+      }
       const old = momentsRef.current[key]?.imageUrl
       updateMoment(key, m => ({ ...m, imageUrl: url, generating: false }))
       if (old) URL.revokeObjectURL(old)
