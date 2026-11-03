@@ -39,3 +39,25 @@
     padding-bottom: calc(4rem + env(safe-area-inset-bottom));
   }
 }
+
+/* Orbe y botón del asistente de voz (de scripts/New Tab/mnestics_voice_agent_flow.html) */
+@keyframes mn-ring {
+  0%   { transform: scale(.75); opacity: var(--ring-peak, .55); }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@keyframes mn-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mn-orb-ring, .mn-orb-core, .mn-mic-rec::after { animation: none !important; }
+}
+.mn-mic-rec::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 2px solid #E8503A;
+  opacity: .4;
+  animation: mn-ring 1.6s ease-out infinite;
+}

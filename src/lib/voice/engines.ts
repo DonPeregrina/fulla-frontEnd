@@ -1,4 +1,5 @@
 import { voiceApi } from '@/services/api'
+import { buildTranscript } from './transcript'
 
 /**
  * Motores de dictado intercambiables (pulsar para hablar). Todos hacen lo mismo:
@@ -98,17 +99,12 @@ const browser: Engine = {
     rec.lang = BROWSER_LANG[lang]
     rec.interimResults = true
     rec.continuous = true
-    let finalText = ''
     let latest = ''
     let failure = ''
+    // Se reconstruye desde TODOS los resultados cada vez (ver transcript.ts): Chrome de Android entrega cada parcial
+    // como un resultado nuevo y acumulado, y pegarlos repetía el texto muchas veces.
     rec.onresult = e => {
-      let interim = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i]
-        if (r.isFinal) finalText += r[0].transcript + ' '
-        else interim += r[0].transcript
-      }
-      latest = (finalText + interim).trim()
+      latest = buildTranscript(e.results)
       onPartial(latest)
     }
     rec.onerror = e => { failure = e.error }
@@ -120,7 +116,7 @@ const browser: Engine = {
             if (failure && failure !== 'no-speech' && failure !== 'aborted' && !latest) {
               return reject(new Error(`Reconocimiento: ${failure}`))
             }
-            resolve((finalText.trim() || latest).trim())
+            resolve(latest.trim())
           }
           rec.stop()
         }),

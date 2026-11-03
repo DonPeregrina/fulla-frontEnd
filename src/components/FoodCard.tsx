@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react'
 import { detectFoods, highlight } from '@/lib/voice/foods'
 import type { MomentData } from '@/lib/voice/useAssistant'
+import { momentLabel } from '@/lib/voice/moments'
 
 /** Posiciones (en %) donde van apareciendo los stickers de lo que se menciona. */
 const SLOTS = [
   { x: 24, y: 36 }, { x: 52, y: 26 }, { x: 78, y: 40 },
   { x: 34, y: 70 }, { x: 66, y: 72 }, { x: 14, y: 62 }, { x: 88, y: 70 }, { x: 50, y: 50 },
 ]
-
-/** Los momentos del día son etiquetas fijas heredadas; aquí se muestran con su significado. */
-const MOMENT_LABEL: Record<string, string> = {
-  'WAKING UP': 'AL DESPERTAR', MORNING: 'MAÑANA', AFTERNOON: 'TARDE', EVENING: 'ATARDECER', NIGHT: 'NOCHE', MEAL: 'BOTANAS',
-}
-const momentLabel = (m: string) => MOMENT_LABEL[m] ?? m
 
 function fileCode(id: string): string {
   let hash = 0

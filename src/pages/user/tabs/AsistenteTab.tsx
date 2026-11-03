@@ -1,31 +1,45 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Mic, RotateCcw, Send, CheckCircle2 } from 'lucide-react'
+import { RotateCcw, Send, CheckCircle2 } from 'lucide-react'
+import ArchiveGallery from '@/components/ArchiveGallery'
 import FoodCard from '@/components/FoodCard'
+import MicButton from '@/components/MicButton'
+import VoiceOrb from '@/components/VoiceOrb'
 import { ENGINES } from '@/lib/voice/engines'
 import { useAssistant, type Status } from '@/lib/voice/useAssistant'
+import { useArchiveImages } from '@/lib/voice/useArchive'
+import { useAuth } from '@/contexts/AuthContext'
 
 const STATUS_LABEL: Record<Status, string> = {
-  idle: 'Mantén para hablar',
-  listening: 'Escuchando…',
-  thinking: 'Pensando…',
-  speaking: 'Hablando… (toca para interrumpir)',
+  idle: 'mantén para hablar',
+  listening: 'escuchando…',
+  thinking: 'pensando…',
+  speaking: 'hablando… (toca para interrumpir)',
+}
+
+const AGENT_STATE: Record<Status, string> = {
+  idle: 'EN LÍNEA',
+  listening: 'ESCUCHANDO',
+  thinking: 'PENSANDO',
+  speaking: 'HABLANDO',
 }
 
 export default function AsistenteTab() {
   const a = useAssistant()
+  const { current } = useAuth()
+  const archivadas = useArchiveImages(current?.id).length
+  const [view, setView] = useState<'chat' | 'archivo'>('chat')
   const [typed, setTyped] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [a.lines, a.partial])
 
-  const talking = a.status === 'listening'
   // La tarjeta más reciente de cada momento del día es la vigente; las anteriores quedan como miniatura
   const lastCardOfMoment: Record<string, number> = {}
   a.lines.forEach(l => { if (l.who === 'card' && l.moment) lastCardOfMoment[l.moment] = l.id })
 
   return (
-    <div className="flex flex-col min-h-full bg-mn-bg pb-72 px-4 pt-3 gap-3 select-none">
+    <div className="flex flex-col min-h-full bg-mn-bg pb-56 px-4 pt-3 gap-3 select-none">
       <div className="flex items-center justify-between">
         <span className="font-mono text-[9px] font-bold text-mn-sky tracking-[0.1em] uppercase">
           // Asistente de voz
@@ -44,11 +58,29 @@ export default function AsistenteTab() {
         <Link to="/user/perfil" className="font-bold text-mn-sky underline">cambiar en Perfil</Link>
       </p>
 
-      {!a.started ? (
-        <div className="flex flex-col items-center justify-center text-center gap-4 py-10">
-          <p className="text-[11px] text-mn-plum max-w-[260px] leading-relaxed">
-            Te preguntaré en qué momento del día estás y luego tus preguntas, una por una. Responde hablando.
-          </p>
+      <div className="flex gap-1 rounded-xl bg-[#E3DCF2] p-1" role="tablist" aria-label="Vista del asistente">
+        {([['chat', 'Chat'], ['archivo', `Archivo${archivadas ? ` · ${archivadas}` : ''}`]] as const).map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={view === id}
+            onClick={() => setView(id)}
+            className={`flex-1 rounded-lg py-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.12em] transition-colors ${view === id ? 'bg-white text-mn-plum shadow-sm' : 'text-[#8878AA]'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'archivo' ? (
+        <ArchiveGallery />
+      ) : !a.started ? (
+        <div className="flex flex-col items-center text-center gap-4 py-6">
+          <div className="pt-4"><VoiceOrb status="idle" size={96} /></div>
+          <div className="font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-[#B0A8CC]">// AGENTE_μ · EN LÍNEA</div>
+          <div className="max-w-[270px] rounded-[14px] rounded-tl-[3px] border border-[#DDD5EE] bg-white px-3 py-2.5 text-left text-[11px] leading-relaxed text-[#5A4A7A]">
+            Hola. Soy tu agente de memoria. <b className="text-[#2D2440]">Te preguntaré en qué momento del día estás</b> y luego tus preguntas, una por una. Responde hablando.
+          </div>
           <button
             onClick={() => void a.begin()}
             className="px-8 py-4 rounded-2xl bg-[#F0C030] text-[#1A1535] text-[10px] font-bold uppercase tracking-[0.2em] active:scale-95 transition-transform"
@@ -58,6 +90,18 @@ export default function AsistenteTab() {
         </div>
       ) : (
         <>
+          {/* Estado del agente: siempre visible arriba mientras se desplaza el chat */}
+          <div className="sticky top-0 z-30 -mx-4 flex items-center gap-3 border-b border-[#E3DCF2] bg-mn-bg/95 px-4 py-2 backdrop-blur">
+            <VoiceOrb status={a.status} size={52} />
+            <div className="font-mono">
+              <div className="text-[8px] font-bold uppercase tracking-[0.14em] text-[#B0A8CC]">// AGENTE_μ</div>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.1em] text-mn-plum">
+                <span className={`h-1.5 w-1.5 rounded-full ${a.status === 'idle' ? 'bg-[#3DB86E]' : a.status === 'listening' ? 'bg-[#E8503A]' : 'bg-[#F0C030]'} animate-pulse`} />
+                {AGENT_STATE[a.status]}
+              </div>
+            </div>
+          </div>
+
           {/* Conversación */}
           <div className="flex flex-col gap-2">
             {a.lines.map(l => {
@@ -95,9 +139,6 @@ export default function AsistenteTab() {
                 {a.partial}…
               </div>
             )}
-            {a.status === 'thinking' && (
-              <div className="self-start px-2 text-[10px] text-mn-sky animate-pulse font-mono">…</div>
-            )}
             <div ref={endRef} />
           </div>
 
@@ -115,26 +156,14 @@ export default function AsistenteTab() {
               </button>
             </div>
           ) : (
-            <div className="fixed inset-x-0 bottom-[72px] z-40 flex flex-col items-center gap-2 px-4 pb-2 pointer-events-none">
-              <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-mn-plum pointer-events-none">
-                {STATUS_LABEL[a.status]}
-              </span>
-              <button
-                onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); void a.pressStart() }}
-                onPointerUp={a.pressEnd}
-                onPointerCancel={a.pressEnd}
-                onContextMenu={e => e.preventDefault()}
+            <div className="pointer-events-none fixed inset-x-0 bottom-[72px] z-40 flex flex-col items-center gap-1.5 bg-gradient-to-t from-mn-bg via-mn-bg/95 to-transparent px-4 pb-2 pt-4">
+              <MicButton
+                recording={a.status === 'listening'}
                 disabled={a.status === 'thinking'}
-                aria-label="Mantén para hablar"
-                style={{ touchAction: 'none' }}
-                className={`pointer-events-auto flex h-20 w-20 items-center justify-center rounded-full border-2 shadow-lg transition-all ${
-                  talking
-                    ? 'scale-110 border-[#F0C030] bg-[#F0C030] text-[#1A1535]'
-                    : 'border-[#1A1535] bg-[#1A1535] text-[#F0C030]'
-                } disabled:opacity-40`}
-              >
-                <Mic size={30} />
-              </button>
+                onPress={() => void a.pressStart()}
+                onRelease={a.pressEnd}
+              />
+              <span className="font-mono text-[9px] font-bold tracking-[0.08em] text-[#8878AA]">{STATUS_LABEL[a.status]}</span>
               <form
                 className="pointer-events-auto flex w-full max-w-sm gap-2"
                 onSubmit={e => { e.preventDefault(); a.sendText(typed); setTyped('') }}
