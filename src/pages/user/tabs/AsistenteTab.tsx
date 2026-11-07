@@ -32,7 +32,7 @@ export default function AsistenteTab() {
   const [typed, setTyped] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [a.lines, a.partial])
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [a.lines, a.partial, a.moments, a.status])
 
   // La tarjeta más reciente de cada momento del día es la vigente; las anteriores quedan como miniatura
   const lastCardOfMoment: Record<string, number> = {}
@@ -139,7 +139,8 @@ export default function AsistenteTab() {
                 {a.partial}…
               </div>
             )}
-            <div ref={endRef} />
+            {/* El margen deja el final del chat por encima del micrófono fijo; sin él el texto en vivo quedaba tapado */}
+            <div ref={endRef} className="scroll-mb-64" />
           </div>
 
           {a.savedCount > 0 && (

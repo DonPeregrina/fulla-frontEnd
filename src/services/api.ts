@@ -63,40 +63,48 @@ export const authApi = {
 // El token determina qué host ─ no se pasa hostId
 
 export const hilosApi = {
-  list: () =>
-    gql<{ groups: import('@/types').Hilo[] }>(`
+  list: async (): Promise<{ groups: import('@/types').Hilo[] }> => {
+    const query = (extra: string) => `
       query Groups {
         groups {
-          id name hostId
+          id name hostId ${extra}
           users { id username name }
           questions { id body categoryId groupId }
         }
       }
-    `),
+    `
+    try {
+      return await gql<{ groups: import('@/types').Hilo[] }>(query('imagesEnabled'))
+    } catch (e) {
+      if (!isMissingField(e)) throw e // backend sin la configuración de imágenes
+      return gql<{ groups: import('@/types').Hilo[] }>(query(''))
+    }
+  },
 
   get: async (id: string): Promise<{ group: import('@/types').Hilo }> => {
-    try {
-      return await gql<{ group: import('@/types').Hilo }>(`
-        query Group($id: ID!) {
-          group(id: $id) {
-            id name hostId
-            users { id username name }
-            questions { id body categoryId groupId answerCount }
-          }
+    const query = (extra: string, answerCount: string) => `
+      query Group($id: ID!) {
+        group(id: $id) {
+          id name hostId ${extra}
+          users { id username name }
+          questions { id body categoryId groupId ${answerCount} }
         }
-      `, { id })
-    } catch (e) {
-      if (!isMissingField(e)) throw e
-      return gql<{ group: import('@/types').Hilo }>(`
-        query Group($id: ID!) {
-          group(id: $id) {
-            id name hostId
-            users { id username name }
-            questions { id body categoryId groupId }
-          }
-        }
-      `, { id })
+      }
+    `
+    // Se prueba con todo lo nuevo y se va quitando lo que el backend aún no tenga
+    const attempts: [string, string][] = [
+      ['imagesEnabled imagePrompt defaultImagePrompt', 'answerCount'],
+      ['', 'answerCount'],
+      ['', ''],
+    ]
+    for (const [i, [extra, count]] of attempts.entries()) {
+      try {
+        return await gql<{ group: import('@/types').Hilo }>(query(extra, count), { id })
+      } catch (e) {
+        if (!isMissingField(e) || i === attempts.length - 1) throw e
+      }
     }
+    throw new Error('Hilo no disponible')
   },
 
   /** Para usuarios: obtener sus hilos por IDs (group(id) funciona con user token) */
@@ -129,6 +137,23 @@ export const hilosApi = {
         updateGroup(id: $id, input: $input) { group { id name } }
       }
     `, { id, input: { name } }),
+
+  /** Activa o apaga las imágenes del hilo y guarda su prompt ("" = volver al predeterminado). */
+  setImages: (id: string, name: string, imagesEnabled: boolean, imagePrompt: string) =>
+    gql<{ updateGroup: { group: import('@/types').Hilo } }>(`
+      mutation UpdateGroupImages($id: ID!, $input: CreateGroupInput!) {
+        updateGroup(id: $id, input: $input) { group { id name imagesEnabled imagePrompt } }
+      }
+    `, { id, input: { name, imagesEnabled, imagePrompt } }),
+
+  /** Imagen de prueba con el prompt que se está escribiendo (no guarda nada). Devuelve el JPEG. */
+  previewImage: async (prompt: string, description: string): Promise<Blob> => {
+    const { data } = await httpClient.post<Blob>('/image-preview', { prompt: prompt || undefined, description }, {
+      responseType: 'blob',
+      timeout: 60000,
+    })
+    return data
+  },
 
   remove: (id: string) =>
     gql<{ removeGroup: { group: { id: string } } }>(`

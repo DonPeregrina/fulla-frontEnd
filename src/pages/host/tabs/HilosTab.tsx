@@ -100,6 +100,7 @@ export default function HilosTab() {
                     {hilo.users?.length ?? 0} usuario{(hilo.users?.length ?? 0) !== 1 ? 's' : ''}
                     {' · '}
                     {hilo.questions?.length ?? 0} pregunta{(hilo.questions?.length ?? 0) !== 1 ? 's' : ''}
+                    {hilo.imagesEnabled && <span className="ml-2 rounded-full bg-[#2D2440] px-1.5 py-0.5 text-[7px] text-[#F0C030]">Imágenes</span>}
                   </p>
                 </div>
                 <ChevronRight size={16} className="text-[#B0A8CC] shrink-0" />

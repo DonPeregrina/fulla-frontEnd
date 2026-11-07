@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
-import { ArrowLeft, X, Trash2, UserPlus, UserMinus, Plus, Pencil, ArrowRightLeft } from 'lucide-react'
+import { ArrowLeft, X, Trash2, UserPlus, UserMinus, Plus, Pencil, ArrowRightLeft, Image as ImageIcon, RotateCcw, Sparkles } from 'lucide-react'
 import { hilosApi, preguntasApi, invitacionesApi, usersApi, getNudoNombre, NUDOS_HARDCODED } from '@/services/api'
 import { nudoColor } from '@/types'
-import type { Pregunta } from '@/types'
+import type { Hilo, Pregunta } from '@/types'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -493,12 +493,148 @@ function TabUsuarios({ hiloId, usuarios }: { hiloId: string; usuarios: { id: str
   )
 }
 
+// ─── Tab Imágenes ─────────────────────────────────────────────────────────────
+
+const PLACEHOLDER = '{descripcion}'
+const EJEMPLO_INICIAL = '2 huevos revueltos con tocino y un vaso de jugo'
+
+/** Imágenes del asistente de voz para este hilo: si se generan y con qué prompt. */
+function TabImagenes({ hilo }: { hilo: Hilo }) {
+  const qc = useQueryClient()
+  const soportado = hilo.imagesEnabled !== undefined
+  const porDefecto = hilo.defaultImagePrompt ?? ''
+  const guardado = hilo.imagePrompt ?? porDefecto
+
+  const [activo, setActivo] = useState(!!hilo.imagesEnabled)
+  const [prompt, setPrompt] = useState(guardado)
+  const [ejemplo, setEjemplo] = useState(EJEMPLO_INICIAL)
+  const [imagen, setImagen] = useState<Blob | null>(null)
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null)
+
+  // La URL se crea y se libera en el mismo efecto (sobrevive al montaje doble de StrictMode)
+  useEffect(() => {
+    if (!imagen) { setImagenUrl(null); return }
+    const url = URL.createObjectURL(imagen)
+    setImagenUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [imagen])
+
+  const sinCambios = activo === !!hilo.imagesEnabled && prompt.trim() === guardado.trim()
+  const promptValido = prompt.trim().includes(PLACEHOLDER)
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      // Si el texto es igual al predeterminado se manda vacío: el hilo sigue el predeterminado aunque cambie después
+      hilosApi.setImages(hilo.id, hilo.name, activo, prompt.trim() === porDefecto.trim() ? '' : prompt.trim()),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hilo', hilo.id] })
+      qc.invalidateQueries({ queryKey: ['hilos'] })
+      toast.success('Imágenes del hilo guardadas')
+    },
+    onError: (e: Error) => toast.error(e.message || 'No se pudo guardar'),
+  })
+
+  const previewMutation = useMutation({
+    mutationFn: () => hilosApi.previewImage(prompt.trim(), ejemplo.trim()),
+    onSuccess: setImagen,
+    onError: () => toast.error('No se pudo generar la imagen de prueba'),
+  })
+
+  if (!soportado) {
+    return (
+      <div className="rounded-2xl border-2 border-dashed border-[#DDD5EE] bg-white/40 px-5 py-8 text-center">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#5A4A7A]">Aún no disponible</p>
+        <p className="mt-1 text-[10px] leading-relaxed text-[#B0A8CC]">
+          El servidor todavía no tiene las imágenes por hilo. Aparecerán aquí en cuanto se actualice.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <button
+        onClick={() => setActivo(v => !v)}
+        role="switch"
+        aria-checked={activo}
+        className="flex w-full items-center gap-3 rounded-2xl border border-[#DDD5EE] bg-white px-4 py-3.5 text-left"
+      >
+        <ImageIcon size={16} className="shrink-0 text-[#5A4A7A]" />
+        <span className="flex-1 text-[10px] font-black uppercase tracking-widest text-[#2D2440]">
+          Generar imágenes en este hilo
+          <span className="mt-0.5 block text-[9px] font-normal normal-case tracking-normal text-[#B0A8CC]">
+            {activo
+              ? 'El asistente dibuja lo que los usuarios contestan en las preguntas de este hilo.'
+              : 'Apagado: las respuestas de este hilo no generan imagen.'}
+          </span>
+        </span>
+        <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${activo ? 'bg-[#F0C030]' : 'bg-[#DDD5EE]'}`}>
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${activo ? 'left-[18px]' : 'left-0.5'}`} />
+        </span>
+      </button>
+
+      <div className="space-y-2 rounded-2xl border border-[#DDD5EE] bg-white p-4">
+        <div className="flex items-center justify-between">
+          <label htmlFor="prompt-imagen" className="text-[10px] font-black uppercase tracking-widest text-[#2D2440]">Prompt de la imagen</label>
+          <button
+            onClick={() => setPrompt(porDefecto)}
+            disabled={prompt.trim() === porDefecto.trim()}
+            className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#5A4A7A] disabled:opacity-30"
+          >
+            <RotateCcw size={11} /> Predeterminado
+          </button>
+        </div>
+        <textarea
+          id="prompt-imagen"
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          rows={7}
+          maxLength={1500}
+          className="w-full resize-y rounded-xl border-2 border-[#DDD5EE] bg-[#F7F4FC] p-3 font-mono text-[11px] leading-relaxed text-[#2D2440] focus:border-[#F0C030] focus:outline-none"
+        />
+        <p className={`text-[9px] ${promptValido ? 'text-[#B0A8CC]' : 'font-bold text-[#E8503A]'}`}>
+          {promptValido
+            ? <>Donde aparece <code className="font-bold">{PLACEHOLDER}</code> se pone lo que contestó el usuario. {prompt.length}/1500</>
+            : <>Falta <code>{PLACEHOLDER}</code>: ahí va lo que contestó el usuario.</>}
+        </p>
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-[#DDD5EE] bg-white p-4">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[#2D2440]">Probar el prompt</p>
+        <input
+          value={ejemplo}
+          onChange={e => setEjemplo(e.target.value)}
+          placeholder="Lo que contestaría un usuario"
+          className="w-full rounded-xl border-2 border-[#DDD5EE] bg-[#F7F4FC] px-3 py-2 text-[12px] text-[#2D2440] focus:border-[#F0C030] focus:outline-none"
+        />
+        <button
+          onClick={() => previewMutation.mutate()}
+          disabled={!promptValido || ejemplo.trim().length < 3 || previewMutation.isPending}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#2D2440] py-2.5 text-[10px] font-black uppercase tracking-widest text-[#2D2440] disabled:opacity-35"
+        >
+          <Sparkles size={13} /> {previewMutation.isPending ? 'Generando…' : 'Generar imagen de prueba'}
+        </button>
+        {imagenUrl && <img src={imagenUrl} alt="Imagen de prueba" className="w-full rounded-2xl border border-[#DDD5EE]" />}
+        <p className="text-[9px] text-[#B0A8CC]">Usa el texto de arriba aunque no lo hayas guardado. Cada prueba tiene un costo pequeño.</p>
+      </div>
+
+      <button
+        onClick={() => saveMutation.mutate()}
+        disabled={sinCambios || !promptValido || saveMutation.isPending}
+        className="w-full rounded-2xl bg-[#2D2440] py-3.5 text-[10px] font-black uppercase tracking-widest text-[#F0C030] disabled:opacity-35"
+      >
+        {saveMutation.isPending ? 'Guardando…' : 'Guardar'}
+      </button>
+    </div>
+  )
+}
+
 // ─── HiloDetail ───────────────────────────────────────────────────────────────
 
 export default function HiloDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [tab, setTab] = useState<'usuarios' | 'preguntas'>('usuarios')
+  const [tab, setTab] = useState<'usuarios' | 'preguntas' | 'imagenes'>('usuarios')
 
   const { data, isLoading } = useQuery({
     queryKey: ['hilo', id],
@@ -530,7 +666,7 @@ export default function HiloDetail() {
       {/* Tabs internos */}
       <div className="px-4 mb-4">
         <div className="flex bg-white rounded-2xl border border-[#DDD5EE] p-1 gap-1">
-          {(['usuarios', 'preguntas'] as const).map(t => (
+          {(['usuarios', 'preguntas', 'imagenes'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -542,7 +678,9 @@ export default function HiloDetail() {
             >
               {t === 'usuarios'
                 ? `Usuarios (${hilo?.users?.length ?? 0})`
-                : `Preguntas (${hilo?.questions?.length ?? 0})`
+                : t === 'preguntas'
+                  ? `Preguntas (${hilo?.questions?.length ?? 0})`
+                  : 'Imágenes'
               }
             </button>
           ))}
@@ -555,9 +693,12 @@ export default function HiloDetail() {
           <Skeleton />
         ) : tab === 'usuarios' ? (
           <TabUsuarios hiloId={id!} usuarios={hilo?.users ?? []} />
-        ) : (
+        ) : tab === 'preguntas' ? (
           <TabPreguntas hiloId={id!} preguntas={hilo?.questions ?? []} />
-        )}
+        ) : hilo ? (
+          // key: si se abre otro hilo o cambian los valores guardados, el formulario arranca con ellos
+          <TabImagenes key={`${hilo.id}:${hilo.imagesEnabled}:${hilo.imagePrompt ?? ''}`} hilo={hilo} />
+        ) : null}
       </div>
     </div>
   )
