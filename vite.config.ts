@@ -6,7 +6,15 @@ import path from 'path'
 // Modo `phone`: el celular entra por un solo origen (túnel HTTPS o red local) y este servidor reenvía /graphql y /voice
 // al backend local, así no hay CORS ni hace falta exponer el puerto 4000. Ver README ("Probar en el celular").
 const LOCAL_BACKEND = 'http://localhost:4000'
-const phoneProxy = { '/graphql': LOCAL_BACKEND, '/voice': LOCAL_BACKEND, '/image-preview': LOCAL_BACKEND }
+const phoneProxy = {
+  '/graphql': LOCAL_BACKEND,
+  '/voice': LOCAL_BACKEND,
+  '/image-preview': LOCAL_BACKEND,
+  '/progress': LOCAL_BACKEND,
+  '/goals': LOCAL_BACKEND,
+  '/analytics-key': LOCAL_BACKEND,
+  '/enricher-key': LOCAL_BACKEND,
+}
 
 export default defineConfig(({ mode }) => ({
   plugins: [

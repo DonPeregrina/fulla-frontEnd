@@ -3,6 +3,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { LogOut, Settings, Bell, LayoutGrid, Camera } from 'lucide-react'
 import AccountSwitcher from '@/components/AccountSwitcher'
 import VoiceSettings from '@/components/VoiceSettings'
+import ApiKeyField from '@/components/ApiKeyField'
+import { analyticsKeyApi } from '@/services/progress'
 import type { User } from '@/types'
 import MnesticsLogo from '@/components/MnesticsLogo'
 
@@ -99,6 +101,15 @@ export default function PerfilTab() {
             </div>
           )}
         </section>
+
+        {/* Llave de AgnoRag: sin ella no hay analíticas ni se procesan las respuestas */}
+        <ApiKeyField
+          title="API key analytics"
+          cacheKey={`analytics:${user.id}`}
+          api={analyticsKeyApi}
+          refresh={['progress']}
+          help="Con esta llave Mnestics calcula tus analíticas: calorías, macros y síntomas de lo que respondes. Se la pides a tu sponsor; solo te la dará si estás en su suscripción. Se guarda cifrada y nunca se vuelve a mostrar completa."
+        />
 
         {/* Asistente de voz: dictado, voz y modo pruebas */}
         <VoiceSettings />
