@@ -1,9 +1,10 @@
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
-import { BookOpen, Mic, User } from 'lucide-react'
+import { Activity, BookOpen, Mic, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useQuery } from '@tanstack/react-query'
 import { bitacorasApi } from '@/services/api'
 import NudosTab from './tabs/NudosTab'
+import ProgresoTab from './tabs/ProgresoTab'
 import HistorialTab from './tabs/HistorialTab'
 import AsistenteTab from './tabs/AsistenteTab'
 import PerfilTab from './tabs/PerfilTab'
@@ -12,7 +13,8 @@ import StreakRow from '@/components/StreakRow'
 import MnesticsLogo from '@/components/MnesticsLogo'
 
 const tabs = [
-  { to: '/user',          label: 'Nodo',   id: 'nodo'   },
+  { to: '/user',          label: 'Progreso', id: 'progreso' },
+  { to: '/user/nodo',     label: 'Nodo',   id: 'nodo'   },
   { to: '/user/asistente',label: 'Asistente', id: 'asistente' },
   { to: '/user/historial',label: 'Diario', id: 'diario' },
   { to: '/user/perfil',   label: 'Perfil', id: 'perfil' },
@@ -31,6 +33,7 @@ function TabIcon({ id, isActive }: { id: string; isActive: boolean }) {
       </div>
     )
   }
+  if (id === 'progreso') return <Activity className={`h-[18px] w-[18px] transition-all ${isActive ? 'stroke-[#F0C030] stroke-[2.5px]' : 'stroke-[#5588AA]'}`} />
   if (id === 'asistente') return <Mic className={`h-[18px] w-[18px] transition-all ${isActive ? 'stroke-[#F0C030] stroke-[2.5px]' : 'stroke-[#5588AA]'}`} />
   if (id === 'diario') return <BookOpen className={`h-[18px] w-[18px] transition-all ${isActive ? 'stroke-[#F0C030] stroke-[2.5px]' : 'stroke-[#5588AA]'}`} />
   return <User className={`h-[18px] w-[18px] transition-all ${isActive ? 'stroke-[#F0C030] stroke-[2.5px]' : 'stroke-[#5588AA]'}`} />
@@ -64,18 +67,19 @@ export default function UserDashboard() {
 
       <main className="flex-1 overflow-y-auto">
         <Routes>
-          <Route index element={<NudosTab />} />
+          <Route index element={<ProgresoTab />} />
+          <Route path="nodo" element={<NudosTab />} />
           <Route path="asistente" element={<AsistenteTab />} />
           <Route path="historial" element={<HistorialTab />} />
           <Route path="perfil"    element={<PerfilTab />} />
-          <Route path="hilos"     element={<Navigate to="/user" replace />} />
-          <Route path="capturas"  element={<Navigate to="/user" replace />} />
+          <Route path="hilos"     element={<Navigate to="/user/nodo" replace />} />
+          <Route path="capturas"  element={<Navigate to="/user/nodo" replace />} />
         </Routes>
       </main>
 
       <nav className="fixed bottom-0 inset-x-0 z-50 flex w-full items-center justify-around border-t border-[#2D2440] bg-[#1A1535] pb-[env(safe-area-inset-bottom)] pt-2.5 shadow-[0_-4px_12px_rgba(26,21,53,0.3)]">
         {tabs.map(({ to, label, id }) => {
-          const isActive = id === 'nodo'
+          const isActive = id === 'progreso'
             ? location.pathname === '/user' || location.pathname === '/user/'
             : location.pathname.startsWith(to)
 

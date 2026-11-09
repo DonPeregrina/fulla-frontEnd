@@ -3,7 +3,20 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
-export default defineConfig({
+// Modo `phone`: el celular entra por un solo origen (túnel HTTPS o red local) y este servidor reenvía /graphql y /voice
+// al backend local, así no hay CORS ni hace falta exponer el puerto 4000. Ver README ("Probar en el celular").
+const LOCAL_BACKEND = 'http://localhost:4000'
+const phoneProxy = {
+  '/graphql': LOCAL_BACKEND,
+  '/voice': LOCAL_BACKEND,
+  '/image-preview': LOCAL_BACKEND,
+  '/progress': LOCAL_BACKEND,
+  '/goals': LOCAL_BACKEND,
+  '/analytics-key': LOCAL_BACKEND,
+  '/enricher-key': LOCAL_BACKEND,
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
@@ -44,8 +57,18 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
+  ...(mode === 'phone' && { define: { 'import.meta.env.VITE_API_URL': JSON.stringify('') } }),
   server: {
     port: 3000,
     host: true,
+    // Los túneles (cloudflared, ngrok…) llegan con su propio nombre de host
+    allowedHosts: mode === 'phone' ? true : undefined,
+    proxy: mode === 'phone' ? phoneProxy : undefined,
   },
-})
+  preview: {
+    port: 3000,
+    host: true,
+    allowedHosts: mode === 'phone' ? true : undefined,
+    proxy: mode === 'phone' ? phoneProxy : undefined,
+  },
+}))

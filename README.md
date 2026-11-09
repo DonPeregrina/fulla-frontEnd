@@ -57,6 +57,25 @@ npm run build      # tsc -b && vite build -> dist/
 npm run preview
 ```
 
+### Probar en el celular (sin esperar a producción)
+
+El micrófono solo funciona en **HTTPS** (o `localhost`), así que `http://192.168.x.x:3000` no sirve para voz. Se usa un
+túnel HTTPS hacia tu máquina. El modo `phone` hace que el celular entre por **un solo origen**: Vite reenvía `/graphql`,
+`/voice` e `/image-preview` al backend local (`localhost:4000`), así que no hay CORS ni se expone el puerto 4000.
+
+```bash
+# 1. backend local en :4000 (ver README del backend)
+# 2. front en modo phone
+npm run dev:phone          # con recarga en vivo, en el navegador del celular
+npm run preview:phone      # build de producción: aquí sí se puede instalar la PWA
+# 3. túnel HTTPS, en otra terminal (cloudflared no necesita cuenta)
+cloudflared tunnel --url http://localhost:3000
+```
+
+Abre en el celular la URL `https://….trycloudflare.com` que imprime el túnel. Cada túnel tiene otro origen: la sesión,
+el archivo de imágenes (IndexedDB) y la PWA instalada son **independientes** de producción y de otros túneles. Con
+`dev:phone` no hay service worker, así que solo funciona en el navegador; para probar la instalación usa `preview:phone`.
+
 Variables (`.env`, ver `.env.example`):
 
 | Variable | Valor |
@@ -159,7 +178,7 @@ Chat por voz (pulsar para hablar) que pregunta el momento del día y luego las p
 | Tab | Ruta | Notas |
 |---|---|---|
 | Bitácoras | `/host/bitacoras` | Respuestas por fecha → usuario |
-| Hilos | `/host/hilos`, `/host/hilos/:id` | Crear/eliminar hilos. Detalle: usuarios (invitar, agregar, quitar) y preguntas (crear, editar, eliminar, selector de Nudo) |
+| Hilos | `/host/hilos`, `/host/hilos/:id` | Crear/eliminar hilos. Detalle: usuarios (invitar, agregar, quitar), preguntas (crear, editar, eliminar, selector de Nudo) e **Imágenes** (activar la generación del asistente de voz en el hilo, editar su prompt con `{descripcion}` y probarlo con una imagen de ejemplo) |
 | Usuarios | `/host/usuarios`, `/host/usuarios/:id` | Lista + invitaciones pendientes. Detalle: hilos del usuario, calendario de bitácoras y respuestas por día |
 | Perfil | `/host/perfil` | Avatar (localStorage), email, nombre, cerrar sesión |
 

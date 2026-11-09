@@ -37,6 +37,11 @@ export interface Hilo {
   hostId: string
   users: Pick<User, 'id' | 'username' | 'name'>[]
   questions: Pregunta[]
+  /** Asistente de voz: este hilo genera una imagen con las respuestas. Ausente si el backend aún no lo soporta. */
+  imagesEnabled?: boolean
+  /** Prompt propio con {descripcion}; null = el predeterminado. Solo lo ve el host. */
+  imagePrompt?: string | null
+  defaultImagePrompt?: string | null
 }
 
 // ─── Preguntas (Questions en el schema) ──────────────────────────────────────
