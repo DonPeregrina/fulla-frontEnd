@@ -65,6 +65,27 @@ export interface Focus {
   headline?: string
 }
 
+export interface FocusFood {
+  /** Nombre canónico del alimento, en singular ("queso") */
+  item: string
+  label: string
+  article: 'las' | 'los'
+  /** En cuántos días / comidas apareció */
+  count: number
+  days?: string[]
+  contribution?: number
+}
+
+/** "Sigue así" y "evita" para la siguiente comida, calculados por AgnoRag con los umbrales que fija el backend */
+export interface FocusLists {
+  nutrient: string
+  windowDays: number
+  keep: FocusFood[]
+  avoid: FocusFood[]
+  /** Por qué una lista puede venir vacía: días con datos, días que cumplieron cada criterio, parámetros usados */
+  meta?: { goal?: number | null; daysWithData?: number; keepDays?: number; avoidDays?: number; reason?: string }
+}
+
 export interface Suggestion {
   text: string
   generatedAt: string

@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { progressApi, goalsApi, analyticsNotConfigured } from '@/services/progress'
-import { MuHero, FoodThumb } from '@/components/progress/MuArt'
+import FocusCards from '@/components/progress/FocusCards'
 import type { Indicator, IndicatorStatus, Target } from '@/types/progress'
 
 const STATUS: Record<IndicatorStatus, { label: string; color: string }> = {
@@ -216,7 +216,6 @@ export default function ProgresoTab() {
   const date = dayKey(offset)
   const [selected, setSelected] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
-  const [promoted, setPromoted] = useState<string | null>(null)
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['progress', current?.id, date],
@@ -231,9 +230,18 @@ export default function ProgresoTab() {
     retry: (count, err) => !analyticsNotConfigured(err) && count < 2,
   })
 
+  // "Sigue así" / "evita": si falla o aún no hay datos, simplemente no se muestra
+  const focusQ = useQuery({
+    queryKey: ['progress', 'focus', current?.id, date],
+    queryFn: () => progressApi.focus(date),
+    enabled: !!current?.id && !!data,
+    staleTime: 1000 * 60,
+    placeholderData: keepPreviousData,
+    retry: false,
+  })
+
   const changeDay = (delta: number) => {
     setOffset(o => Math.min(Math.max(o + delta, 0), MAX_DAYS_BACK))
-    setPromoted(null)
     setSelected(null)
     setEditing(null)
   }
@@ -282,12 +290,6 @@ export default function ProgresoTab() {
   const capPct = (cap / span) * 100
   const over = cap > 0 && kcalValue > cap
 
-  // Por ahora la imagen solo sirve para "evita esto": se muestra cuando el nutriente en foco va cerca o pasado.
-  // Cuando va bien (ok) se hará la versión con pulgar arriba (ver PLAN-PROGRESO.md, imágenes).
-  const avoid = data.focus && (data.focus.status === 'over' || data.focus.status === 'near') ? data.focus : null
-  // El alimento tocado en las miniaturas pasa a ser el principal
-  const top = avoid ? [...avoid.top].sort((a, b) => (a.item === promoted ? -1 : b.item === promoted ? 1 : 0)) : []
-  const main = top[0]
 
   return (
     <div className="flex flex-col gap-1.5 px-3.5 pb-28 pt-2">
@@ -313,39 +315,7 @@ export default function ProgresoTab() {
         </button>
       </div>
 
-      {main && (
-        <>
-          <div className="flex h-[104px] shrink-0 gap-1.5">
-            <div className="relative flex-1 overflow-hidden rounded-[14px] border-[1.5px] border-mn-border bg-[#E9E2F7]">
-              <MuHero item={main} />
-            </div>
-            <div className="flex w-[58px] flex-col gap-1.5">
-              {top.slice(1).map((x, i) => (
-                <button
-                  key={x.item}
-                  type="button"
-                  onClick={() => setPromoted(x.item)}
-                  aria-label={`Evitar ${x.label}`}
-                  className="relative flex-1 overflow-hidden rounded-xl border-[1.5px] border-mn-border bg-[#E9E2F7] p-0 hover:border-[#2D2440]"
-                >
-                  <FoodThumb item={x} />
-                  <span className="absolute inset-x-0 bottom-px truncate whitespace-nowrap bg-[#EDE9F8]/80 px-0.5 text-center text-[6.5px] font-bold text-[#5A4A7A]">
-                    #{i + 2} {x.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <b className="whitespace-nowrap rounded-[5px] bg-[#2D2440] px-2 py-[5px] text-[10px] tracking-[0.05em] text-mn-gold">
-              EVITA {main.article.toUpperCase()} {main.label.toUpperCase()}
-            </b>
-            <i className="text-[8px] font-bold not-italic leading-[1.35] text-[#5A4A7A]">
-              {main.item === avoid?.top[0].item && avoid.headline ? avoid.headline : `${main.count} ${main.count === 1 ? 'vez' : 'veces'} en ${avoid?.windowDays} días`}
-            </i>
-          </div>
-        </>
-      )}
+      {focusQ.data && <FocusCards focus={focusQ.data} />}
 
       <section className="flex min-h-0 flex-col overflow-hidden rounded-md border-[1.5px] border-[#C4BAD8] bg-[#F8F6FD]">
         <div className="flex items-center justify-between bg-[#2D2440] px-2.5 py-1.5 text-[8px] font-bold tracking-[0.12em] text-[#EDE9F8]">

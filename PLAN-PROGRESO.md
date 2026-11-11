@@ -225,3 +225,13 @@ Tipos reales en `src/types/progress.ts`. Respecto a la sección 8:
 
 ## Ramas
 Una rama por repositorio (backend y front) para todo lo de Progreso; no se crean ramas por paso.
+
+## "Sigue así" y "evita" (decisión del 2026-11-10, reemplaza al héroe con manos/personaje)
+- Se quitan las manos y el personaje. Dos tarjetas: izquierda "SIGUE ASÍ" (✓ debajo de la imagen) y derecha "EVITA" (🚫 debajo). El ✓ y el 🚫 los dibuja la app encima; la imagen es solo del alimento.
+- Empieza solo con calorías y con el alimento canónico (queso, pan, carne de trompo), no con el platillo.
+- Reglas (las calcula AgnoRag en `GET /progress/focus`, con parámetros que fija Node en `src/infrastructure/progress/focus.config.ts`, sobrescribibles con la variable `FOCUS_PARAMS`):
+  - keep: días dentro de 90–110 % de la meta de kcal; los alimentos que aparecen en más de esos días; top 2; mínimo 2 días.
+  - avoid: días con más de 120 % de la meta; los alimentos que más kcal aportaron; top 2; mínimo 2 días.
+  - La respuesta trae `meta` (días que cumplieron cada criterio, parámetros usados) para saber por qué una lista sale vacía.
+- Imagen de cada alimento: `GET /progress/food-image/:item` (Gemini, estilo calcomanía, una vez por alimento; caché en Azure Storage `food-images`, en memoria si no hay almacenamiento). Pendiente de AgnoRag: la ruta `/progress/focus`.
+- Siguiente paso posible: guardar estos parámetros por hilo en `params` de la asignación de pipelines para que el host los ajuste.
