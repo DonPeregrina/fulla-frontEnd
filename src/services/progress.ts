@@ -1,7 +1,24 @@
 import { httpClient } from '@/services/api'
-import type { ProgressDay } from '@/types/progress'
+import type { FocusLists, ProgressDay } from '@/types/progress'
+
+/** Imagen de un alimento (la genera el servidor una vez y la reutiliza). Devuelve una URL local para <img>. */
+const foodImage = (item: string): Promise<string> =>
+  httpClient
+    .get<Blob>(`/progress/food-image/${encodeURIComponent(item)}`, { responseType: 'blob' })
+    .then(r => URL.createObjectURL(r.data))
+
+/** "Sigue así" y "evita" del día elegido */
+const focus = (date: string): Promise<FocusLists> =>
+  httpClient
+    .get<FocusLists>('/progress/focus', { params: { date, tz: Intl.DateTimeFormat().resolvedOptions().timeZone } })
+    .then(r => {
+      if (!r.data || !Array.isArray(r.data.keep) || !Array.isArray(r.data.avoid)) throw new Error('Respuesta de focus inválida')
+      return r.data
+    })
 
 export const progressApi = {
+  focus,
+  foodImage,
   /** Indicadores del día (calorías, macros, verdura), por comida y alimento en foco. Los calcula AgnoRag; Node solo los pasa. */
   daily: (date: string): Promise<ProgressDay> =>
     httpClient
