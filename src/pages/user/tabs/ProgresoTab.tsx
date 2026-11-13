@@ -5,34 +5,17 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { progressApi, goalsApi, analyticsNotConfigured } from '@/services/progress'
 import FocusCards from '@/components/progress/FocusCards'
-import type { Indicator, IndicatorStatus, Target } from '@/types/progress'
+import MealsSection from '@/components/progress/MealsSection'
+import { BAR_COLOR, DEFAULT_BAR_COLOR, fmt, goalMax, goalText, STATUS } from '@/components/progress/shared'
+import type { Indicator } from '@/types/progress'
 
-const STATUS: Record<IndicatorStatus, { label: string; color: string }> = {
-  ok:      { label: 'BIEN',      color: '#3DB86E' },
-  under:   { label: 'FALTA',     color: '#B08A10' },
-  near:    { label: 'CERCA',     color: '#B08A10' },
-  over:    { label: 'PASADO',    color: '#E8503A' },
-  no_data: { label: 'SIN DATOS', color: '#8878AA' },
-}
 const NO_GOAL = { label: 'SIN META', color: '#8878AA' }
 
-// Color de cada indicador; los que no se conocen usan el azul de la marca
-const BAR_COLOR: Record<string, string> = { protein_g: '#E8503A', carbs_g: '#EDB828', fat_g: '#5B8DE8', veg_g: '#3DB86E' }
-const barColor = (i: Indicator) => (i.status === 'over' ? '#E8503A' : BAR_COLOR[i.key] ?? '#5588AA')
+const barColor = (i: Indicator) => (i.status === 'over' ? '#E8503A' : BAR_COLOR[i.key] ?? DEFAULT_BAR_COLOR)
 
 /** La meta cae al ~77 % del carril, así queda espacio para ver cuánto te pasaste */
 const SCALE = 1.3
 
-const fmt = (n: number) => Math.round(n).toLocaleString('es-MX')
-const goalMax = (t: Target) => (t.type === 'max' || t.type === 'range' ? t.max : t.type === 'min' ? t.min : 0)
-
-/** Texto de la meta: "140", "≤ 200" no, solo el número o el rango, para "98 / 140 g" */
-function goalText(t: Target): string {
-  if (t.type === 'max') return fmt(t.max)
-  if (t.type === 'min') return fmt(t.min)
-  if (t.type === 'range') return `${fmt(t.min)}–${fmt(t.max)}`
-  return ''
-}
 
 /** Posiciones (0..1 del carril) del relleno, de la marca de la meta y, si es rango, de su banda */
 function track(i: Indicator) {
@@ -230,11 +213,11 @@ export default function ProgresoTab() {
     retry: (count, err) => !analyticsNotConfigured(err) && count < 2,
   })
 
-  // "Sigue así" / "evita": si falla o aún no hay datos, simplemente no se muestra
+  // "Sigue así" / "evita": va por su cuenta (no espera al balance del día); si falla o aún no hay datos, simplemente no se muestra
   const focusQ = useQuery({
     queryKey: ['progress', 'focus', current?.id, date],
     queryFn: () => progressApi.focus(date),
-    enabled: !!current?.id && !!data,
+    enabled: !!current?.id,
     staleTime: 1000 * 60,
     placeholderData: keepPreviousData,
     retry: false,
@@ -257,13 +240,43 @@ export default function ProgresoTab() {
       </div>
     )
   }
+  // Navegación de días: la comparten la pantalla normal y la de error, para poder cambiar de día aunque falle una parte
+  const dayNav = (
+    <div className="flex items-center justify-between">
+      <button
+        type="button"
+        onClick={() => changeDay(1)}
+        disabled={offset >= MAX_DAYS_BACK}
+        aria-label="Día anterior"
+        className="rounded-full border-[1.5px] border-[#C4BAD8] p-1 text-[#5A4A7A] enabled:hover:border-[#2D2440] disabled:opacity-30"
+      >
+        <ChevronLeft size={14} />
+      </button>
+      <span className="text-[9px] font-bold tracking-[0.12em] text-[#5A4A7A]">{dayLabel(offset)}</span>
+      <button
+        type="button"
+        onClick={() => changeDay(-1)}
+        disabled={offset === 0}
+        aria-label="Día siguiente"
+        className="rounded-full border-[1.5px] border-[#C4BAD8] p-1 text-[#5A4A7A] enabled:hover:border-[#2D2440] disabled:opacity-30"
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  )
+
+  // Si el balance del día no carga, "sigue así / evita" se muestran igual (y al revés): cada bloque falla por separado
   if (isError || !data) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8878AA]">sin conexión</p>
-        <button onClick={() => refetch()} className="mt-3 rounded-full border-[1.5px] border-[#C4BAD8] px-4 py-2 text-[9.5px] font-bold text-[#8878AA]">
-          REINTENTAR
-        </button>
+      <div className="flex flex-col gap-1.5 px-3.5 pb-28 pt-2">
+        {dayNav}
+        {focusQ.data && <FocusCards focus={focusQ.data} />}
+        <div className="rounded-md border-[1.5px] border-[#C4BAD8] bg-[#F8F6FD] p-6 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#8878AA]">no se pudo cargar el balance del día</p>
+          <button onClick={() => refetch()} className="mt-3 rounded-full border-[1.5px] border-[#C4BAD8] px-4 py-2 text-[9.5px] font-bold text-[#8878AA]">
+            REINTENTAR
+          </button>
+        </div>
       </div>
     )
   }
@@ -293,27 +306,7 @@ export default function ProgresoTab() {
 
   return (
     <div className="flex flex-col gap-1.5 px-3.5 pb-28 pt-2">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => changeDay(1)}
-          disabled={offset >= MAX_DAYS_BACK}
-          aria-label="Día anterior"
-          className="rounded-full border-[1.5px] border-[#C4BAD8] p-1 text-[#5A4A7A] enabled:hover:border-[#2D2440] disabled:opacity-30"
-        >
-          <ChevronLeft size={14} />
-        </button>
-        <span className="text-[9px] font-bold tracking-[0.12em] text-[#5A4A7A]">{dayLabel(offset)}</span>
-        <button
-          type="button"
-          onClick={() => changeDay(-1)}
-          disabled={offset === 0}
-          aria-label="Día siguiente"
-          className="rounded-full border-[1.5px] border-[#C4BAD8] p-1 text-[#5A4A7A] enabled:hover:border-[#2D2440] disabled:opacity-30"
-        >
-          <ChevronRight size={14} />
-        </button>
-      </div>
+      {dayNav}
 
       {focusQ.data && <FocusCards focus={focusQ.data} />}
 
@@ -393,12 +386,18 @@ export default function ProgresoTab() {
               <div key={m.slot} className="flex items-center gap-[7px] py-px">
                 <div className="w-[70px] text-[9px] font-bold uppercase">{m.label}</div>
                 <div className="flex-1 text-[8.5px] text-[#5A4A7A]">
-                  {m.status === 'no_data' ? '—' : fmt(m.kcal)}
-                  <span className="text-[#8878AA]"> · meta {m.target.type === 'range' ? `${fmt(m.target.min)}–${fmt(m.target.max)}` : goalText(m.target)}</span>
+                  {m.status === 'no_data' || m.kcal == null ? '—' : fmt(m.kcal)}
+                  {m.target.type !== 'none' && <span className="text-[#8878AA]"> · meta {goalText(m.target)}</span>}
                 </div>
-                <div className="w-[52px] rounded-sm py-0.5 text-center text-[7.5px] font-bold tracking-[0.06em] text-white" style={{ background: STATUS[m.status].color }}>
-                  {STATUS[m.status].label}
-                </div>
+                {/* Sin meta (p. ej. "Otros") AgnoRag devuelve 'ok': no es un "bien", así que se muestra como sin meta */}
+                {(() => {
+                  const st = m.target.type === 'none' && m.status !== 'no_data' ? NO_GOAL : STATUS[m.status]
+                  return (
+                    <div className="w-[52px] rounded-sm py-0.5 text-center text-[7.5px] font-bold tracking-[0.06em] text-white" style={{ background: st.color }}>
+                      {st.label}
+                    </div>
+                  )
+                })()}
               </div>
             ))}
           </div>
@@ -410,6 +409,8 @@ export default function ProgresoTab() {
           </p>
         )}
       </section>
+
+      <MealsSection date={data.date} meals={data.meals} indicators={data.indicators} />
 
       <div className="flex gap-2">
         <button
