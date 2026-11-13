@@ -32,14 +32,34 @@ export interface Indicator {
   series?: { date: string; value: number }[]
 }
 
+/** Un alimento (o ingrediente) de una franja, tal como lo entendió AgnoRag: sirve para auditar la elementización */
+export interface MealItem {
+  item: string | null
+  /** Lo que dijo la persona, textual */
+  raw_fragment: string | null
+  grams: number
+  /** La cantidad fue supuesta */
+  estimated: boolean
+  /** No tiene perfil nutricional */
+  no_profile: boolean
+  /** Lo que aportó a cada indicador (mismas llaves y unidades que indicators[].value) */
+  values: Record<string, number>
+}
+
 export interface Meal {
-  /** Morning | Meal | Afternoon | Night */
+  /** Categoría configurada (Morning, Meal, Afternoon, Night, …) o "Other" para lo que no cae en ninguna */
   slot: string
-  /** Desayuno, Snacks, Comida, Cena */
+  /** Desayuno, Snacks, Comida, Cena, Otros */
   label: string
-  kcal: number
+  /** null = sin registros */
+  kcal: number | null
+  n_lines?: number
   target: Target
   status: IndicatorStatus
+  /** Lo que aportó la franja a cada indicador */
+  values?: Record<string, number>
+  /** Hasta 8, de mayor a menor aporte de kcal */
+  items?: MealItem[]
 }
 
 export interface FocusItem {
