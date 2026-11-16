@@ -204,12 +204,13 @@ export const invitacionesApi = {
       }
     `, { input: { email, groupId } }),
 
-  accept: (id: string) =>
-    gql<{ acceptInvite: { invite: import('@/types').Invitacion } }>(`
+  /** Crea la cuenta de quien recibió la invitación (el correo y el host salen de la invitación). `user` es null si la invitación no existe. */
+  accept: (id: string, user: { username: string; password: string; name?: string }) =>
+    gql<{ acceptInvite: { user: { id: string; username: string } | null } }>(`
       mutation AcceptInvite($input: AcceptInviteInput!) {
-        acceptInvite(input: $input) { invite { id } }
+        acceptInvite(input: $input) { user { id username } }
       }
-    `, { input: { id } }),
+    `, { input: { id, user } }),
 
   remove: (id: string) =>
     gql<{ removeInvite: { invite: { id: string } } }>(`
