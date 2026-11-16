@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import SignIn from '@/pages/SignIn'
+import AcceptInvite from '@/pages/AcceptInvite'
 import HostDashboard from '@/pages/host/HostDashboard'
 import UserDashboard from '@/pages/user/UserDashboard'
 import Shell from '@/components/Shell'
@@ -48,6 +49,8 @@ export default function App() {
         }
       />
       <Route path="/signin" element={<SignIn />} />
+      {/* Pública: a ella llega quien recibe una invitación por correo */}
+      <Route path="/invites/accept" element={<AcceptInvite />} />
       <Route
         path="/host/*"
         element={
