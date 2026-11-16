@@ -130,7 +130,7 @@ Repo: `Delta-Habits/backend` (local: `GIT/HabiOS/backend`). Express + Apollo Ser
 | Despliegue | GitHub Actions `main_delta-habits.yml`: build de imagen -> Docker Hub -> App Service. `scripts/start.sh` corre `prisma migrate deploy`, el seed (categorías) y luego la app |
 | Base relacional | **Azure SQL** (servidor `dhwarehouse`, base `deltahabits`, Standard, siempre en línea) vía Prisma: usuarios, hosts, hilos, preguntas, invitaciones, categorías, notificaciones |
 | Base de documentos | **MongoDB** vía mongoose: las **respuestas** (`answer.model.ts`, IDs de 24 hex). URI en la variable `MONGO_URI` del App Service |
-| Secretos | Variables del App Service: `DATABASE_URL`, `MONGO_URI`, `JWT_SECRET`, `SENDGRID_API_KEY`, `AZURE_STORAGE_CONNECTION_STRING` |
+| Secretos | Variables del App Service: `DATABASE_URL`, `MONGO_URI`, `JWT_SECRET`, `ACS_EMAIL_CONNECTION_STRING`, `AZURE_STORAGE_CONNECTION_STRING` |
 | Auth | JWT (`id` + `role`), firmado con `JWT_SECRET`, **sin expiración** |
 
 **Incidente 2026-10-09 -> 2026-10-12 (resuelto):** cualquier consulta que tocaba SQL fallaba con

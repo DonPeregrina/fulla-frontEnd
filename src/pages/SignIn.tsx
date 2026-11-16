@@ -18,8 +18,10 @@ type FormData = z.infer<typeof schema>
 
 const WAKE_ESTIMATE_S = 75
 const POLL_INTERVAL_MS = 8000
+// Si en este tiempo no despierta, se deja de insistir: el sistema probablemente está caído, no dormido
+const MAX_WAKE_S = 180
 
-type SystemState = 'checking' | 'sleeping' | 'waking' | 'awake'
+type SystemState = 'checking' | 'sleeping' | 'waking' | 'awake' | 'failed'
 
 // ─── Banner de estado del sistema ─────────────────────────────────────────────
 
@@ -86,6 +88,30 @@ function SystemBanner({ state, countdown, onWake, wasAwakeOnMount }: {
     )
   }
 
+  if (state === 'failed') {
+    return (
+      <div className="mb-5 rounded-2xl border border-[#E8503A]/40 bg-[#1A1535] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-[#E8503A] shrink-0" />
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white">No se pudo despertar el sistema</p>
+            <p className="text-[8px] text-[#5588AA] mt-0.5">
+              Pasaron {Math.round(MAX_WAKE_S / 60)} minutos sin respuesta. Puede estar caído: intenta de nuevo en un rato.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onWake}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-[9px] tracking-[0.2em] uppercase transition-all active:scale-95"
+          style={{ backgroundColor: '#F0C030', color: '#1A1535' }}
+        >
+          <Zap className="h-3.5 w-3.5" />
+          Reintentar
+        </button>
+      </div>
+    )
+  }
+
   if (state === 'awake' && !wasAwakeOnMount) {
     return (
       <div className="mb-5 flex items-center justify-center gap-2 text-[#10b981]">
@@ -113,6 +139,7 @@ export default function SignIn() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const limitRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -132,6 +159,7 @@ export default function SignIn() {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
       if (countdownRef.current) clearInterval(countdownRef.current)
+      if (limitRef.current) clearTimeout(limitRef.current)
     }
   }, [])
 
@@ -143,6 +171,7 @@ export default function SignIn() {
   function startWaking() {
     if (pollRef.current) clearInterval(pollRef.current)
     if (countdownRef.current) clearInterval(countdownRef.current)
+    if (limitRef.current) clearTimeout(limitRef.current)
     setSystemState('waking')
     setCountdown(WAKE_ESTIMATE_S)
     countdownRef.current = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000)
@@ -150,9 +179,15 @@ export default function SignIn() {
       const result = await healthApi.ping()
       if (result === 'awake') {
         clearInterval(pollRef.current!); clearInterval(countdownRef.current!)
+        if (limitRef.current) clearTimeout(limitRef.current)
         setSystemState('awake'); setWasAwakeOnMount(false)
       }
     }, POLL_INTERVAL_MS)
+    limitRef.current = setTimeout(() => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      if (countdownRef.current) clearInterval(countdownRef.current)
+      setSystemState('failed')
+    }, MAX_WAKE_S * 1000)
   }
 
   if (session && !agregando) return <Navigate to={session.role === 'HOST' ? '/host' : '/user'} replace />
