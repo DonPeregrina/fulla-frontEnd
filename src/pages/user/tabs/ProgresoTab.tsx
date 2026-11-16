@@ -51,7 +51,8 @@ function hint(i: Indicator): { text: string; color: string } {
 }
 
 /** Día (YYYY-MM-DD) en la zona del dispositivo y cuántos días hacia atrás se pueden consultar (0 = hoy) */
-const MAX_DAYS_BACK = 6
+// Del lado del servidor no hay tope (AgnoRag acepta cualquier fecha); 30 días es lo que se muestra aquí.
+const MAX_DAYS_BACK = 30
 
 function dayAt(offset: number) {
   const d = new Date()
@@ -60,8 +61,17 @@ function dayAt(offset: number) {
 }
 const dayKey = (offset: number) => dayAt(offset).toLocaleDateString('en-CA')
 
+/** Cuántos días antes de hoy cae una fecha "YYYY-MM-DD" (en la zona del dispositivo); no baja de 0 */
+function offsetOf(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.round((today.getTime() - new Date(y, m - 1, d).getTime()) / 86_400_000))
+}
+
+// Con 30 días un mismo número de día puede repetirse entre meses, por eso va el mes
 function dayLabel(offset: number) {
-  const short = dayAt(offset).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit' }).replace('.', '').toUpperCase()
+  const short = dayAt(offset).toLocaleDateString('es-MX', { weekday: 'short', day: '2-digit', month: 'short' }).replace(/[.,]/g, '').toUpperCase()
   return offset === 0 ? `HOY · ${short}` : offset === 1 ? `AYER · ${short}` : short
 }
 
@@ -223,13 +233,13 @@ export default function ProgresoTab() {
     retry: false,
   })
 
-  const changeDay = (delta: number) => {
-    setOffset(o => Math.min(Math.max(o + delta, 0), MAX_DAYS_BACK))
+  const goToOffset = (next: number) => {
+    setOffset(Math.min(Math.max(next, 0), MAX_DAYS_BACK))
     setSelected(null)
     setEditing(null)
   }
+  const changeDay = (delta: number) => goToOffset(offset + delta)
 
-  if (isLoading) return <p className="p-6 text-center text-[10px] font-bold uppercase tracking-widest text-[#8878AA]">cargando…</p>
   if (isError && analyticsNotConfigured(error)) {
     return (
       <div className="p-6 text-center">
@@ -252,7 +262,19 @@ export default function ProgresoTab() {
       >
         <ChevronLeft size={14} />
       </button>
-      <span className="text-[9px] font-bold tracking-[0.12em] text-[#5A4A7A]">{dayLabel(offset)}</span>
+      {/* Tocar el día abre el selector de fecha del dispositivo (con 30 días, ir de uno en uno con las flechas cansa) */}
+      <label className="relative cursor-pointer text-[9px] font-bold tracking-[0.12em] text-[#5A4A7A] underline decoration-dotted underline-offset-4">
+        {dayLabel(offset)}
+        <input
+          type="date"
+          value={date}
+          min={dayKey(MAX_DAYS_BACK)}
+          max={dayKey(0)}
+          onChange={e => { if (e.target.value) goToOffset(offsetOf(e.target.value)) }}
+          aria-label="Elegir día"
+          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        />
+      </label>
       <button
         type="button"
         onClick={() => changeDay(-1)}
@@ -264,6 +286,16 @@ export default function ProgresoTab() {
       </button>
     </div>
   )
+
+  // Cargando: la navegación de días se queda (si no, al pedir un día sin datos previos desaparecería el selector)
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-1.5 px-3.5 pb-28 pt-2">
+        {dayNav}
+        <p className="p-6 text-center text-[10px] font-bold uppercase tracking-widest text-[#8878AA]">cargando…</p>
+      </div>
+    )
+  }
 
   // Si el balance del día no carga, "sigue así / evita" se muestran igual (y al revés): cada bloque falla por separado
   if (isError || !data) {
