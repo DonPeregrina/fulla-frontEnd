@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { invitacionesApi } from '@/services/api'
+import { backendMessage } from '@/lib/inviteErrors'
 import MnesticsLogo from '@/components/MnesticsLogo'
 
 // Pantalla a la que llega quien recibe una invitación por correo (/invites/accept?id=…): elige su usuario y su
@@ -31,6 +32,8 @@ type FormData = z.infer<typeof schema>
 
 /** Traduce los errores del backend (a veces llegan como texto de Prisma) a algo que una persona entienda */
 function describeError(err: unknown): string {
+  const known = backendMessage(err)
+  if (known) return known
   const msg = err instanceof Error ? err.message : ''
   const low = msg.toLowerCase()
   if (low.includes('already used')) return 'Esta invitación ya se usó. Si ya creaste tu cuenta, inicia sesión.'

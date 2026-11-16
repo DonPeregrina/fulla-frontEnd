@@ -192,6 +192,12 @@ export const usersApi = {
         user(id: $id) { id username name email hostId groups }
       }
     `, { id }),
+
+  /** Elimina la cuenta de un usuario del host: lo quita de sus hilos y borra su invitación. No se puede deshacer. */
+  remove: (id: string) =>
+    gql<{ removeUser: { user: { id: string } | null } }>(`
+      mutation RemoveUser($id: ID!) { removeUser(id: $id) { user { id } } }
+    `, { id }),
 }
 
 // ─── Invitaciones ─────────────────────────────────────────────────────────────
@@ -219,7 +225,7 @@ export const invitacionesApi = {
 
   listMine: () =>
     gql<{ invites: import('@/types').Invitacion[] }>(`
-      query Invites { invites { id email groupId hostId } }
+      query Invites { invites { id email groupId hostId used } }
     `),
 }
 

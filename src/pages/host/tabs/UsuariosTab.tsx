@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { UserPlus, X, ChevronRight, Clock, Users } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usersApi, invitacionesApi } from '@/services/api'
+import { inviteSendError } from '@/lib/inviteErrors'
 
 function Skeleton() {
   return (
@@ -51,7 +52,7 @@ export default function UsuariosTab() {
       toast.success('Invitación enviada')
       setEmail(''); setInviteOpen(false)
     },
-    onError: () => toast.error('No se pudo enviar la invitación'),
+    onError: err => toast.error(inviteSendError(err)),
   })
 
   const cancelMutation = useMutation({
@@ -65,7 +66,8 @@ export default function UsuariosTab() {
   })
 
   const usuarios = usersData?.users ?? []
-  const invites = invitesData?.invites ?? []
+  // Una invitación ya aceptada (used) no está pendiente: ya es un usuario de la lista
+  const invites = (invitesData?.invites ?? []).filter(i => !i.used)
   const isLoading = loadingUsers || loadingInvites
   const total = usuarios.length + invites.length
 

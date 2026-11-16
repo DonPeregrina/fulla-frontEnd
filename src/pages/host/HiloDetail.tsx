@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
 import { ArrowLeft, X, Trash2, UserPlus, UserMinus, Plus, Pencil, ArrowRightLeft, Image as ImageIcon, RotateCcw, Sparkles } from 'lucide-react'
 import { hilosApi, preguntasApi, invitacionesApi, usersApi, getNudoNombre, NUDOS_HARDCODED } from '@/services/api'
+import { inviteSendError } from '@/lib/inviteErrors'
 import { nudoColor } from '@/types'
 import type { Hilo, Pregunta } from '@/types'
 
@@ -287,7 +288,7 @@ function TabUsuarios({ hiloId, usuarios }: { hiloId: string; usuarios: { id: str
     staleTime: 1000 * 60 * 2,
   })
 
-  const invitesDelHilo = (invitesData?.invites ?? []).filter(i => i.groupId === hiloId)
+  const invitesDelHilo = (invitesData?.invites ?? []).filter(i => i.groupId === hiloId && !i.used)
 
   const inviteMutation = useMutation({
     mutationFn: () => invitacionesApi.send(email.trim(), hiloId),
@@ -296,7 +297,7 @@ function TabUsuarios({ hiloId, usuarios }: { hiloId: string; usuarios: { id: str
       toast.success('Invitación enviada')
       setEmail(''); setInviteOpen(false)
     },
-    onError: () => toast.error('No se pudo enviar'),
+    onError: err => toast.error(inviteSendError(err)),
   })
 
   const addMutation = useMutation({
