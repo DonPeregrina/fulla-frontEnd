@@ -94,6 +94,8 @@ export interface Invitacion {
   email: string
   groupId?: string
   hostId: string
+  /** true cuando ya se aceptó (la cuenta existe): ya no está pendiente */
+  used: boolean
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { toast } from 'sonner'
 import {
   ArrowLeft, X, ChevronLeft, ChevronRight as ChevronRightIcon,
-  LayoutGrid, UserMinus, UserPlus
+  LayoutGrid, UserMinus, UserPlus, Trash2
 } from 'lucide-react'
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
@@ -133,6 +133,8 @@ export default function UsuarioDetail() {
   const qc = useQueryClient()
   const [agregarHiloOpen, setAgregarHiloOpen] = useState(false)
   const [removiendoHilo, setRemoviendoHilo] = useState<string | null>(null)
+  const [eliminarOpen, setEliminarOpen] = useState(false)
+  const [confirmacion, setConfirmacion] = useState('')
 
   const { data: userData, isLoading } = useQuery({
     queryKey: ['user', id],
@@ -174,7 +176,22 @@ export default function UsuarioDetail() {
     onError: () => toast.error('No se pudo remover'),
   })
 
+  const deleteUserMutation = useMutation({
+    mutationFn: () => usersApi.remove(id!),
+    onSuccess: () => {
+      // No se toca la caché de ['user', id]: seguiría montada un instante y volvería a pedir a un usuario que ya no existe
+      qc.invalidateQueries({ queryKey: ['users-all'] })
+      qc.invalidateQueries({ queryKey: ['invitaciones'] })
+      qc.invalidateQueries({ queryKey: ['hilos'] })
+      toast.success('Usuario eliminado')
+      navigate('/host/usuarios', { replace: true })
+    },
+    onError: () => toast.error('No se pudo eliminar al usuario'),
+  })
+
   const usuario = userData?.user
+  // Se pide escribir el usuario: borrar una cuenta no se puede deshacer
+  const confirmado = !!usuario && confirmacion.trim().toLowerCase() === usuario.username.toLowerCase()
   const todosHilos = hilosData?.groups ?? []
   const bitacoras = bitacorasData?.collections ?? []
 
@@ -280,6 +297,21 @@ export default function UsuarioDetail() {
             <CalendarioBitacoras userId={id!} bitacoras={bitacoras} />
           )}
         </div>
+
+        {/* Zona de peligro */}
+        {!isLoading && usuario && (
+          <div className="rounded-2xl border border-[#E8503A]/30 bg-white px-4 py-4">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-[#E8503A] mb-1">Zona de peligro</p>
+            <p className="text-[10px] text-[#8878AA] mb-3">Elimina la cuenta de este participante. No se puede deshacer.</p>
+            <button
+              onClick={() => { setConfirmacion(''); setEliminarOpen(true) }}
+              className="flex items-center gap-2 rounded-xl border-2 border-[#E8503A]/40 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#E8503A] hover:bg-[#E8503A]/10 transition-colors"
+            >
+              <Trash2 size={13} />
+              Eliminar usuario
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Dialog: Agregar a hilo */}
@@ -316,6 +348,55 @@ export default function UsuarioDetail() {
                 ))}
               </div>
             )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Dialog: Eliminar usuario (hay que escribir su usuario para confirmar) */}
+      <Dialog.Root open={eliminarOpen} onOpenChange={o => { if (!o && !deleteUserMutation.isPending) setEliminarOpen(false) }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+          <Dialog.Content className="fixed inset-x-4 top-[15%] z-50 rounded-[28px] border-2 border-[#E8503A]/30 bg-[#EDE9F8] p-6 max-w-sm mx-auto focus:outline-none">
+            <Dialog.Title className="text-[11px] font-black uppercase tracking-[.2em] text-[#E8503A] mb-3">
+              Eliminar usuario
+            </Dialog.Title>
+            <Dialog.Description className="text-xs text-[#5A4A7A] mb-3 leading-relaxed">
+              Vas a eliminar la cuenta de <b className="text-[#2D2440]">@{usuario?.username}</b> ({usuario?.email}).
+            </Dialog.Description>
+            <ul className="text-[11px] text-[#5A4A7A] mb-4 list-disc pl-5 space-y-1 leading-snug">
+              <li>Se quita de todos sus hilos y se borra su invitación.</li>
+              <li>Ya no podrá entrar con esa cuenta.</li>
+              <li>Sus respuestas ya registradas <b>no se borran</b>, pero quedan sin cuenta a la que pertenecer.</li>
+              <li><b>No se puede deshacer.</b></li>
+            </ul>
+            <label className="block text-[9px] font-bold uppercase tracking-widest text-[#8878AA] mb-1.5">
+              Escribe <span className="text-[#2D2440]">{usuario?.username}</span> para confirmar
+            </label>
+            <input
+              value={confirmacion}
+              onChange={e => setConfirmacion(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              disabled={deleteUserMutation.isPending}
+              className="w-full rounded-2xl border-2 border-[#DDD5EE] bg-white px-4 py-3 text-sm text-[#2D2440] font-mono focus:outline-none focus:border-[#E8503A] mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEliminarOpen(false)}
+                disabled={deleteUserMutation.isPending}
+                className="flex-1 py-3 rounded-2xl border-2 border-[#DDD5EE] text-[10px] font-bold uppercase tracking-widest text-[#5A4A7A] disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => deleteUserMutation.mutate()}
+                disabled={!confirmado || deleteUserMutation.isPending}
+                className="flex-1 py-3 rounded-2xl bg-[#E8503A] text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-30"
+              >
+                {deleteUserMutation.isPending ? 'Eliminando…' : 'Eliminar'}
+              </button>
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
