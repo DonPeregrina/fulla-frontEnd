@@ -8,10 +8,13 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
+  # Botón "Run workflow" en la pestaña Actions: sirve para volver a desplegar si GitHub no dispara el push
+  workflow_dispatch:
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # El despliegue manual solo desde main: esta tarea publica a producción, no a una vista previa
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
