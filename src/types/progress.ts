@@ -111,6 +111,16 @@ export interface Suggestion {
   generatedAt: string
 }
 
+/** Impacto proyectado de un hipotético ("una dona") en los indicadores de hoy. No guarda nada. */
+export interface WhatIfResult {
+  /** Comentario de Mu sobre el impacto; lo redacta el LLM, los números no */
+  comment: string
+  /** Sugerencia de intercambio ("mejor 2 tacos que 3 quesadillas"), opcional */
+  suggestion?: string
+  /** Mismas llaves que indicators[].key en ProgressDay; valor y estatus SI se agregara el hipotético */
+  indicators: { key: string; value: number; status: IndicatorStatus }[]
+}
+
 export interface ProgressDay {
   date: string
   timezone: string

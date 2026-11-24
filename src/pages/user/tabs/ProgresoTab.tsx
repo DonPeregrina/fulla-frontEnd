@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { progressApi, goalsApi, analyticsNotConfigured } from '@/services/progress'
 import FocusCards from '@/components/progress/FocusCards'
 import MealsSection from '@/components/progress/MealsSection'
+import MuModal from '@/components/progress/MuModal'
 import { BAR_COLOR, DEFAULT_BAR_COLOR, fmt, goalMax, goalText, STATUS } from '@/components/progress/shared'
 import type { Indicator } from '@/types/progress'
 
@@ -209,6 +210,7 @@ export default function ProgresoTab() {
   const date = dayKey(offset)
   const [selected, setSelected] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
+  const [muOpen, setMuOpen] = useState(false)
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['progress', current?.id, date],
@@ -447,16 +449,17 @@ export default function ProgresoTab() {
       <div className="flex gap-2">
         <button
           type="button"
-          disabled
-          title="Próximamente"
-          className="flex-1 rounded-3xl border-[1.5px] border-mn-gold bg-mn-gold p-2.5 text-[9.5px] font-bold text-[#2D2440] opacity-70"
+          onClick={() => setMuOpen(true)}
+          className="flex-1 rounded-3xl border-[1.5px] border-mn-gold bg-mn-gold p-2.5 text-[9.5px] font-bold text-[#2D2440]"
         >
-          HABLAR CON MU · PRONTO
+          HABLAR CON MU
         </button>
         <Link to="/user/historial" className="rounded-3xl border-[1.5px] border-[#C4BAD8] p-2.5 text-[9.5px] font-bold text-[#8878AA]">
           ARCHIVO
         </Link>
       </div>
+
+      <MuModal open={muOpen} onClose={() => setMuOpen(false)} indicators={data.indicators} />
     </div>
   )
 }
