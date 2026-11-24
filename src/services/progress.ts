@@ -1,5 +1,5 @@
 import { httpClient } from '@/services/api'
-import type { FocusLists, ProgressDay } from '@/types/progress'
+import type { FocusLists, ProgressDay, WhatIfResult } from '@/types/progress'
 
 /** Imagen de un alimento (la genera el servidor una vez y la reutiliza). Devuelve una URL local para <img>. */
 const foodImage = (item: string): Promise<string> =>
@@ -30,6 +30,12 @@ export const progressApi = {
         if (!r.data || !Array.isArray(r.data.indicators)) throw new Error('Respuesta de progreso inválida')
         return r.data
       }),
+  /** Hipotético de Mu ("se me antoja una dona"): no guarda nada, solo proyecta el impacto en los indicadores de hoy */
+  whatIf: (text: string): Promise<WhatIfResult> =>
+    httpClient.post<WhatIfResult>('/progress/what-if', { text }).then(r => {
+      if (!r.data || !Array.isArray(r.data.indicators)) throw new Error('Respuesta de Mu inválida')
+      return r.data
+    }),
 }
 
 export interface GoalBody {
