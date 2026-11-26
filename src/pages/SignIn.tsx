@@ -190,6 +190,17 @@ export default function SignIn() {
     }, MAX_WAKE_S * 1000)
   }
 
+  // Solo el rechazo explícito del backend es "credenciales incorrectas"; todo lo demás es un fallo del servicio
+  function loginErrorMessage(err: any): string {
+    const msg = String(err?.message ?? '').toLowerCase()
+    if (msg.includes('invalid credentials')) return 'Credenciales incorrectas'
+    if (msg.includes('invocation') || msg.includes('prisma') || msg.includes('database') || msg.includes('not allowed to access the server')) {
+      return 'No se pudo consultar la base de datos. Intenta de nuevo en un momento'
+    }
+    if (err?.response?.status === 429) return 'Demasiados intentos, espera un momento'
+    return 'No se pudo iniciar sesión por un error del servidor, no por tus credenciales'
+  }
+
   if (session && !agregando) return <Navigate to={session.role === 'HOST' ? '/host' : '/user'} replace />
 
   async function onSubmit(data: FormData) {
@@ -198,8 +209,11 @@ export default function SignIn() {
       await login(data.identifier, data.password)
       if (agregando) navigate(data.identifier.includes('@') ? '/host' : '/user', { replace: true })
     } catch (err: any) {
-      if (err?.code === 'SLEEPING') startWaking()
-      else toast.error('Credenciales incorrectas')
+      if (err?.code === 'SLEEPING') {
+        if (err.reason) toast.error(err.reason)
+        startWaking()
+      }
+      else toast.error(loginErrorMessage(err))
     } finally {
       setLoading(false)
     }
