@@ -23,7 +23,7 @@ export default function ArchiveGallery() {
 
   async function remove(img: ArchivedView) {
     if (!userId) return
-    await deleteImage(userId, img.day, img.moment)
+    await deleteImage(userId, img.day, img.moment, img.hiloId)
     setOpen(null)
     qc.invalidateQueries({ queryKey: [ARCHIVE_KEY, userId] })
   }

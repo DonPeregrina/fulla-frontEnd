@@ -39,7 +39,7 @@ const BARS = Array.from({ length: 26 }, (_, i) => ({ h: 6 + Math.round(Math.sin(
  * en vivo (solo con un dictado que dé texto en vivo). Al terminar, la imagen real de Gemini se revela encima.
  */
 export default function FoodCard({
-  moment, questionId, data, live, active, listening, compact,
+  moment, questionId, data, live, active, listening, compact, onDrawNow,
 }: {
   moment: string
   questionId: string
@@ -48,6 +48,8 @@ export default function FoodCard({
   active: boolean
   listening: boolean
   compact: boolean
+  /** Pide la imagen ya, sin esperar a que se cierre el hilo (si el usuario no va a contestar el resto). */
+  onDrawNow?: () => void
 }) {
   const said = Object.values(data?.answers ?? {}).join(' ')
   const hits = detectFoods(`${said} ${live}`)
@@ -72,7 +74,11 @@ export default function FoodCard({
 
       <div className="relative aspect-[4/3] overflow-hidden rounded-[14px] border-[1.5px] border-[#DDD5EE] bg-[#E9E2F7]">
         <span className="absolute left-2 top-2 z-10 rounded-lg bg-[#2D2440]/80 px-2 py-0.5 font-mono text-[7px] font-bold tracking-[0.1em] text-[#EDE9F8]">
-          {data?.generating ? '// DIBUJANDO…' : image ? '// IMG_FINAL' : `// IMG_GEN · ${hits.length}`}
+          {data?.generating
+            ? '// DIBUJANDO…'
+            : data?.pending
+              ? (image ? '// SE ACTUALIZA AL CERRAR' : '// ESPERANDO EL RESTO…')
+              : image ? '// IMG_FINAL' : `// IMG_GEN · ${hits.length}`}
         </span>
 
         {!image && hits.length === 0 && (
@@ -97,6 +103,16 @@ export default function FoodCard({
           <div className="absolute inset-x-0 bottom-0 h-1 animate-pulse bg-[#F0C030]" />
         )}
       </div>
+
+      {data?.pending && !data.generating && onDrawNow && (
+        <button
+          type="button"
+          onClick={onDrawNow}
+          className="w-full rounded-xl border border-[#DDD5EE] bg-white py-2 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-mn-plum active:scale-95 transition-transform"
+        >
+          Dibujar ahora
+        </button>
+      )}
 
       {hits.length > 0 && (
         <div className="flex min-h-[22px] flex-wrap gap-1.5">

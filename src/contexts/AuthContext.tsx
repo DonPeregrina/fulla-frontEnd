@@ -127,6 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (isNetworkError || isDbSleeping) {
         const sleeping = new Error('Sistema durmiendo')
         ;(sleeping as any).code = 'SLEEPING'
+        // Sin respuesta HTTP = servidor apagado, sin red o bloqueado por CORS; con 5xx = servidor con error o despertando
+        ;(sleeping as any).reason = isNetworkError && !(err as any).response
+          ? 'No hay respuesta del servidor (apagado, sin conexión o bloqueado por CORS)'
+          : isNetworkError
+            ? `El servidor respondió con error ${(err as any).response.status}`
+            : 'La base de datos está despertando'
         throw sleeping
       }
       throw err

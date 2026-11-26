@@ -20,10 +20,12 @@ export interface Line {
   /** Solo en tarjetas: pregunta y momento del día a los que pertenece. */
   questionId?: string
   moment?: string
+  /** Solo en tarjetas: (momento + hilo) al que pertenece; todas las tarjetas del mismo slot comparten imagen. */
+  slot?: string
 }
 
 /**
- * Lo dicho en un momento del día para las preguntas con imagen, y la imagen que se generó con todo eso.
+ * Lo dicho en un momento del día y un hilo para las preguntas con imagen, y la imagen que se generó con todo eso.
  * `answers` guarda la ÚLTIMA respuesta de cada pregunta (igual que la base de datos: una respuesta por pregunta y día),
  * así una corrección reemplaza lo anterior en lugar de sumarse.
  */
@@ -31,7 +33,16 @@ export interface MomentData {
   answers: Record<string, string>
   imageUrl?: string
   generating: boolean
+  /** Hay respuestas que aún no están en la imagen: se dibuja al cerrarse el hilo o con "Dibujar ahora". */
+  pending: boolean
+  /** Pregunta cuyo hilo aporta el prompt de la imagen, momento y hilo (para archivar). */
+  lastQuestionId?: string
+  moment?: string
+  hiloId?: string
 }
+
+/** Una imagen por (momento del día, hilo): dos hilos con imagen en el mismo momento no se mezclan. */
+export const slotKey = (moment: string, hiloId?: string | null) => `${moment.toUpperCase()}::${hiloId ?? ''}`
 
 // Idioma de dictado: hoy español. Es un ajuste y no un literal repartido por el código (listo para varios idiomas).
 const LANG: Lang = 'es'
@@ -77,45 +88,74 @@ export function useAssistant() {
     setLines(l => [...l, { id: ++lineId.current, ...line }])
 
   function updateMoment(key: string, fn: (m: MomentData) => MomentData) {
-    const next = fn(momentsRef.current[key] ?? { answers: {}, generating: false })
+    const next = fn(momentsRef.current[key] ?? { answers: {}, generating: false, pending: false })
     momentsRef.current = { ...momentsRef.current, [key]: next }
     setMoments(momentsRef.current)
   }
 
   /**
-   * Genera la imagen del momento del día con TODO lo dicho hasta ahora (plato y bebida). Se genera de nuevo cada vez,
+   * Anota lo dicho en un (momento, hilo) SIN generar imagen. Las respuestas quedan en `answers` de inmediato, así los
+   * stickers en vivo de la tarjeta siguen apareciendo mientras se habla; lo único que se aplaza es la llamada a la imagen.
+   */
+  function collect(slot: string, moment: string, hiloId: string | undefined, saved: { questionId: string; body: string }[]) {
+    updateMoment(slot, m => ({
+      ...m,
+      moment,
+      hiloId,
+      answers: { ...m.answers, ...Object.fromEntries(saved.map(s => [s.questionId, s.body])) },
+      lastQuestionId: saved[saved.length - 1].questionId,
+      pending: true,
+    }))
+  }
+
+  /**
+   * Genera la imagen del (momento, hilo) con TODO lo dicho hasta ahora (plato y bebida). Se genera de nuevo cada vez,
    * no se edita la anterior: así no se acumula deriva. Si llega una respuesta nueva mientras se dibuja, gana la última.
    */
-  async function drawMoment(key: string, saved: { questionId: string; body: string }[]) {
-    const seq = (drawSeq.current[key] = (drawSeq.current[key] ?? 0) + 1)
-    updateMoment(key, m => ({
-      ...m,
-      answers: { ...m.answers, ...Object.fromEntries(saved.map(s => [s.questionId, s.body])) },
-      generating: true,
-    }))
+  async function drawSlot(slot: string) {
+    const snap = momentsRef.current[slot]
+    if (!snap?.lastQuestionId) return
+    const seq = (drawSeq.current[slot] = (drawSeq.current[slot] ?? 0) + 1)
+    updateMoment(slot, m => ({ ...m, pending: false, generating: true }))
     try {
-      const description = Object.values(momentsRef.current[key].answers).join(', ')
-      const blob = await voiceApi.image(saved[saved.length - 1].questionId, description)
-      if (seq !== drawSeq.current[key]) return
+      const description = Object.values(snap.answers).join(', ')
+      const blob = await voiceApi.image(snap.lastQuestionId, description)
+      if (seq !== drawSeq.current[slot]) return
       const url = URL.createObjectURL(blob)
-      // Archivo local: solo en sesiones reales (en modo pruebas no se archiva) y solo la imagen vigente del momento
-      if (userId && !isTestMode()) {
+      // Archivo local: solo en sesiones reales (en modo pruebas no se archiva) y solo la imagen vigente del hilo
+      if (userId && !isTestMode() && snap.moment) {
         void saveImage({
-          userId, day: todayISO(), moment: key, description, image: blob,
-          questionIds: Object.keys(momentsRef.current[key].answers),
+          userId, day: todayISO(), moment: snap.moment, hiloId: snap.hiloId, description, image: blob,
+          questionIds: Object.keys(snap.answers),
         }).then(ok => {
           if (ok) qc.invalidateQueries({ queryKey: [ARCHIVE_KEY, userId] })
         })
       }
-      const old = momentsRef.current[key]?.imageUrl
-      updateMoment(key, m => ({ ...m, imageUrl: url, generating: false }))
+      const old = momentsRef.current[slot]?.imageUrl
+      updateMoment(slot, m => ({ ...m, imageUrl: url, generating: false }))
       if (old) URL.revokeObjectURL(old)
     } catch (e) {
-      if (seq !== drawSeq.current[key]) return
-      updateMoment(key, m => ({ ...m, generating: false }))
+      if (seq !== drawSeq.current[slot]) return
+      updateMoment(slot, m => ({ ...m, generating: false }))
       toast.error(`No pude dibujar la imagen: ${friendly(e)}`)
     }
   }
+
+  /**
+   * Dibuja lo que ya no va a recibir más respuestas. Un (momento, hilo) con respuestas pendientes ESPERA mientras la
+   * siguiente pregunta que plantea el asistente sea del mismo hilo y momento y lleve imagen; se dibuja cuando la
+   * siguiente es de otro hilo/momento, no lleva imagen, no hay más preguntas o la sesión terminó.
+   */
+  function flushFinished(turn: { done: boolean; question?: VoiceQuestion | null }) {
+    const q = turn.question
+    const waitingSlot = !turn.done && q?.imagen ? slotKey(q.nudo ?? momentRef.current, q.hiloId) : null
+    Object.entries(momentsRef.current).forEach(([slot, m]) => {
+      if (m.pending && slot !== waitingSlot) void drawSlot(slot)
+    })
+  }
+
+  /** "Dibujar ahora": el usuario no va a contestar el resto del hilo y quiere ver la imagen ya. */
+  const drawNow = (slot: string) => { void drawSlot(slot) }
 
   /** En iPhone, el audio solo suena si el elemento se "desbloquea" dentro de un toque del usuario. */
   function unlockAudio() {
@@ -182,7 +222,10 @@ export function useAssistant() {
         setQuestion(turn.question)
         if (turn.question.nudo) momentRef.current = turn.question.nudo.toUpperCase()
         if (turn.question.imagen) {
-          addLine({ who: 'card', text: '', questionId: turn.question.id, moment: momentRef.current })
+          addLine({
+            who: 'card', text: '', questionId: turn.question.id, moment: momentRef.current,
+            slot: slotKey(momentRef.current, turn.question.hiloId),
+          })
         }
       } else if (turn.done) {
         setQuestion(null)
@@ -202,15 +245,21 @@ export function useAssistant() {
         }
         // Solo se dibuja lo que trae descripción visual (comida o bebida); un peso o un "nada" no genera imagen
         const withImage = turn.saved.filter(s => s.imagen && s.visual).map(s => ({ ...s, body: s.visual! }))
-        // Cada respuesta pertenece al momento de SU pregunta (puede ser uno anterior si el usuario corrige algo).
-        // La imagen se dibuja mientras el asistente habla, sin hacerlo esperar.
-        const byMoment = new Map<string, typeof withImage>()
+        // Cada respuesta pertenece al momento Y al hilo de SU pregunta (puede ser un momento anterior si el usuario
+        // corrige algo). Aquí solo se anotan; la imagen se pide cuando ya no falten respuestas de ese hilo (abajo).
+        const bySlot = new Map<string, { moment: string; hiloId?: string; items: typeof withImage }>()
         withImage.forEach(item => {
-          const key = (item.nudo ?? momentRef.current).toUpperCase()
-          byMoment.set(key, [...(byMoment.get(key) ?? []), item])
+          const moment = (item.nudo ?? momentRef.current).toUpperCase()
+          const hiloId = item.hiloId ?? undefined
+          const slot = slotKey(moment, hiloId)
+          const entry = bySlot.get(slot) ?? { moment, hiloId, items: [] }
+          entry.items.push(item)
+          bySlot.set(slot, entry)
         })
-        byMoment.forEach((items, key) => { void drawMoment(key, items) })
+        bySlot.forEach((e, slot) => collect(slot, e.moment, e.hiloId, e.items))
       }
+      // Solo se decide al guardar algo o al terminar: un turno de aclaración (sin guardar ni preguntar) no cierra el hilo
+      if (turn.saved.length > 0 || turn.done) flushFinished(turn)
       if (turn.done) setDone(true)
       await speak(turn.reply)
     } catch (e) {
@@ -307,6 +356,6 @@ export function useAssistant() {
   return {
     engineId, voiceOut, testMode,
     lines, status, partial, started, done, savedCount, question, moments,
-    begin, pressStart, pressEnd, sendText, reset,
+    begin, pressStart, pressEnd, sendText, reset, drawNow,
   }
 }

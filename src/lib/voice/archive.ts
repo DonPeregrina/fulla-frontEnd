@@ -1,6 +1,7 @@
 /**
  * Archivo local de las imágenes de comida: se guardan en el propio dispositivo (IndexedDB), no en la nube.
- * Una imagen por (usuario, día, momento del día): al regenerarse con una respuesta nueva reemplaza a la anterior.
+ * Una imagen por (usuario, día, momento del día, hilo): al regenerarse con una respuesta nueva reemplaza a la anterior.
+ * Dos hilos con imagen en el mismo momento del día guardan cada uno la suya. Las imágenes viejas (sin hilo) conservan su llave.
  *
  * Limitaciones (a propósito, sin almacenamiento en la nube): se pierden si se borran los datos del navegador o se
  * desinstala la app, y no pasan de un dispositivo a otro. Todo falla en silencio: si IndexedDB no está disponible
@@ -16,6 +17,8 @@ export interface ArchivedImage {
   day: string
   /** Momento del día en mayúsculas ("MORNING", "WAKING UP", …). */
   moment: string
+  /** Hilo cuyas respuestas dieron origen a la imagen (ausente en imágenes anteriores a separar por hilo). */
+  hiloId?: string
   /** Lo que se dibujó (la descripción que se le mandó a la imagen). */
   description: string
   /** Preguntas cuyas respuestas dieron origen a la imagen (el Diario la muestra bajo ellas). */
@@ -24,7 +27,8 @@ export interface ArchivedImage {
   updatedAt: number
 }
 
-const keyOf = (userId: string, day: string, moment: string) => `${userId}|${day}|${moment.toUpperCase()}`
+const keyOf = (userId: string, day: string, moment: string, hiloId?: string) =>
+  `${userId}|${day}|${moment.toUpperCase()}${hiloId ? `|${hiloId}` : ''}`
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -78,16 +82,17 @@ function askPersistence() {
 }
 
 export async function saveImage(p: {
-  userId: string; day: string; moment: string; description: string; questionIds: string[]; image: Blob
+  userId: string; day: string; moment: string; hiloId?: string; description: string; questionIds: string[]; image: Blob
 }): Promise<boolean> {
   try {
     askPersistence()
     const blob = await shrinkImage(p.image)
     const row: ArchivedImage = {
-      key: keyOf(p.userId, p.day, p.moment),
+      key: keyOf(p.userId, p.day, p.moment, p.hiloId),
       userId: p.userId,
       day: p.day,
       moment: p.moment.toUpperCase(),
+      ...(p.hiloId ? { hiloId: p.hiloId } : {}),
       description: p.description,
       questionIds: p.questionIds,
       blob,
@@ -110,6 +115,6 @@ export async function listImages(userId: string): Promise<ArchivedImage[]> {
   }
 }
 
-export async function deleteImage(userId: string, day: string, moment: string): Promise<void> {
-  try { await run('readwrite', s => s.delete(keyOf(userId, day, moment))) } catch { /* nada que borrar */ }
+export async function deleteImage(userId: string, day: string, moment: string, hiloId?: string): Promise<void> {
+  try { await run('readwrite', s => s.delete(keyOf(userId, day, moment, hiloId))) } catch { /* nada que borrar */ }
 }
