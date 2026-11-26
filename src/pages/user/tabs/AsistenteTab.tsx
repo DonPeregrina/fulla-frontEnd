@@ -34,9 +34,9 @@ export default function AsistenteTab() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [a.lines, a.partial, a.moments, a.status])
 
-  // La tarjeta más reciente de cada momento del día es la vigente; las anteriores quedan como miniatura
-  const lastCardOfMoment: Record<string, number> = {}
-  a.lines.forEach(l => { if (l.who === 'card' && l.moment) lastCardOfMoment[l.moment] = l.id })
+  // La tarjeta más reciente de cada (momento del día + hilo) es la vigente; las anteriores quedan como miniatura
+  const lastCardOfSlot: Record<string, number> = {}
+  a.lines.forEach(l => { if (l.who === 'card' && l.slot) lastCardOfSlot[l.slot] = l.id })
 
   return (
     <div className="flex flex-col min-h-full bg-mn-bg pb-56 px-4 pt-3 gap-3 select-none">
@@ -106,18 +106,19 @@ export default function AsistenteTab() {
           <div className="flex flex-col gap-2">
             {a.lines.map(l => {
               if (l.who === 'card') {
-                const isLatest = lastCardOfMoment[l.moment!] === l.id
+                const isLatest = lastCardOfSlot[l.slot!] === l.id
                 const active = isLatest && a.question?.id === l.questionId
                 return (
                   <FoodCard
                     key={l.id}
                     moment={l.moment!}
                     questionId={l.questionId!}
-                    data={a.moments[l.moment!]}
+                    data={a.moments[l.slot!]}
                     live={active ? a.partial : ''}
                     active={active}
                     listening={a.status === 'listening'}
                     compact={!isLatest}
+                    onDrawNow={() => a.drawNow(l.slot!)}
                   />
                 )
               }
