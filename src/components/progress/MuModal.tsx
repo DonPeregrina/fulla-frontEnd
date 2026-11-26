@@ -73,6 +73,7 @@ export default function MuModal({ open, onClose, indicators }: { open: boolean; 
   const sessionRef = useRef<ListenSession | null>(null)
   const silenceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const doneRef = useRef(false) // evita cerrar el turno dos veces (palabra "listo" + silencio a la vez)
+  const transcriptRef = useRef('') // último texto oído, para cerrar el turno desde el círculo sin depender de un render
 
   function clearSilence() {
     if (silenceRef.current) clearTimeout(silenceRef.current)
@@ -86,8 +87,19 @@ export default function MuModal({ open, onClose, indicators }: { open: boolean; 
     sessionRef.current = null
     setPhase('start')
     setTranscript('')
+    transcriptRef.current = ''
     setResult(null)
     setErrorMsg('')
+  }
+
+  /** El círculo central: toca para empezar y, mientras escucha, toca para terminar (sin depender de la palabra "listo") */
+  function onOrbPress() {
+    if (phase === 'listening') {
+      const session = sessionRef.current
+      if (session) void finish(session, transcriptRef.current)
+    } else if (phase === 'start' || phase === 'error') {
+      void startListening()
+    }
   }
 
   // Al cerrarse el modal se corta cualquier micrófono abierto, aunque la respuesta no haya llegado
@@ -127,6 +139,7 @@ export default function MuModal({ open, onClose, indicators }: { open: boolean; 
     doneRef.current = false
     setErrorMsg('')
     setTranscript('')
+    transcriptRef.current = ''
     setResult(null)
     setPhase('listening')
     try {
@@ -134,6 +147,7 @@ export default function MuModal({ open, onClose, indicators }: { open: boolean; 
         lang: 'es',
         onPartial: text => {
           setTranscript(text)
+          transcriptRef.current = text
           clearSilence()
           silenceRef.current = setTimeout(() => void finish(session, text), SILENCE_TIMEOUT_MS)
           if (END_WORD.test(text)) void finish(session, text)
@@ -160,23 +174,25 @@ export default function MuModal({ open, onClose, indicators }: { open: boolean; 
 
           {phase !== 'result' && (
             <div className="flex flex-col items-center gap-3 py-2">
-              <VoiceOrb status={phase === 'thinking' ? 'thinking' : phase === 'listening' ? 'listening' : 'idle'} size={96} />
+              <button
+                type="button"
+                onClick={onOrbPress}
+                disabled={phase === 'thinking'}
+                aria-label={phase === 'listening' ? 'Terminar de hablar' : 'Tocar para hablar'}
+                className="rounded-full active:scale-95 transition-transform disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-mn-gold"
+              >
+                <VoiceOrb status={phase === 'thinking' ? 'thinking' : phase === 'listening' ? 'listening' : 'idle'} size={96} />
+              </button>
               {phase === 'start' && (
-                <>
-                  <p className="text-center text-[11px] leading-snug text-[#5A4A7A]">
-                    Dime qué se te antoja y te muestro cómo te dejaría. Di <b>"listo"</b> cuando termines de hablar.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => void startListening()}
-                    className="rounded-3xl bg-mn-gold px-5 py-2.5 text-[10px] font-bold text-[#2D2440]"
-                  >
-                    TOCA PARA HABLAR
-                  </button>
-                </>
+                <p className="text-center text-[11px] leading-snug text-[#5A4A7A]">
+                  Dime qué se te antoja y te muestro cómo te dejaría. <b>Toca el círculo para hablar</b> y tócalo otra vez cuando termines (o di <b>"listo"</b>).
+                </p>
               )}
               {phase === 'listening' && (
-                <p className="min-h-[2.5em] text-center text-[12px] leading-snug text-[#2D2440]">{transcript || 'Escuchando…'}</p>
+                <>
+                  <p className="min-h-[2.5em] text-center text-[12px] leading-snug text-[#2D2440]">{transcript || 'Escuchando…'}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#8878AA]">Toca el círculo al terminar</p>
+                </>
               )}
               {phase === 'thinking' && <p className="text-[11px] text-[#8878AA]">Mu está pensando…</p>}
               {phase === 'error' && (
